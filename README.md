@@ -1,2 +1,2 @@
-# wilcocrypt
+# Wilcocrypt
 A encrypting tool
