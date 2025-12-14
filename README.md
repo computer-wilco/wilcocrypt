@@ -1,7 +1,7 @@
 # WilcoCrypt
 
 **WilcoCrypt** is a simple and secure file encryption tool for Node.js.  
-It provides a clear public API for encrypting and decrypting files, while advanced users can access internal helpers via \`wilcocrypt._\` if needed.
+It provides a clear public API for encrypting and decrypting files, while advanced users can access internal helpers via `wilcocrypt._` if needed.
 
 ---
 
