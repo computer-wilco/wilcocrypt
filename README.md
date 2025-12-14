@@ -10,7 +10,7 @@ It provides a clear public API for encrypting and decrypting files, while advanc
 - AES-256-CBC file encryption
 - Scrypt password-based key derivation
 - MessagePack + gzip for compact storage
-- Version support (\`2.0.0\`)
+- Version support (`2.0.0`)
 - Safe error handling for wrong passwords or corrupted data
 - Clear separation between public API and internal helpers
 
