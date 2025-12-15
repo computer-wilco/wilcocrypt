@@ -7,6 +7,32 @@ const wilcocrypt = {};
 wilcocrypt._ = {};
 
 /* =========================
+   Custom Error
+========================= */
+
+/**
+ * Custom error type for WilcoCrypt.
+ * All library-specific errors throw this error.
+ */
+class WilcoCryptError extends Error {
+  /**
+   * @param {string} message - Human-readable error message
+   * @param {string} [code] - Optional machine-readable error code
+   */
+  constructor(message, code = 'WILCOCRYPT_ERROR') {
+    super(message);
+    this.name = 'WilcoCryptError';
+    this.code = code;
+
+    if (Error.captureStackTrace) {
+      Error.captureStackTrace(this, WilcoCryptError);
+    }
+  }
+}
+
+wilcocrypt._.WilcoCryptError = WilcoCryptError;
+
+/* =========================
    Internal constants
 ========================= */
 
@@ -28,14 +54,20 @@ wilcocrypt._.VERSION = '2.0.0';
  * @private
  * @param {Buffer} key - 32-byte encryption key
  * @param {Buffer} iv - 16-byte initialization vector
- * @throws {Error} If key or IV are invalid
+ * @throws {WilcoCryptError} If key or IV are invalid
  */
 wilcocrypt._.assertKeyAndIv = function (key, iv) {
   if (!Buffer.isBuffer(key) || key.length !== 32) {
-    throw new Error('Invalid encryption key (expected 32-byte Buffer)');
+    throw new WilcoCryptError(
+      'Invalid encryption key (expected 32-byte Buffer)',
+      'INVALID_KEY'
+    );
   }
   if (!Buffer.isBuffer(iv) || iv.length !== 16) {
-    throw new Error('Invalid IV (expected 16-byte Buffer)');
+    throw new WilcoCryptError(
+      'Invalid IV (expected 16-byte Buffer)',
+      'INVALID_IV'
+    );
   }
 };
 
@@ -72,7 +104,7 @@ wilcocrypt._.encryptData = function (plainText, key, iv) {
  * @param {Buffer} key - 32-byte encryption key
  * @param {Buffer} iv - 16-byte initialization vector
  * @returns {string} Decrypted UTF-8 plaintext
- * @throws {Error} If decryption fails (invalid password or corrupted data)
+ * @throws {WilcoCryptError} If decryption fails
  */
 wilcocrypt._.decryptData = function (cipherHex, key, iv) {
   wilcocrypt._.assertKeyAndIv(key, iv);
@@ -86,7 +118,10 @@ wilcocrypt._.decryptData = function (cipherHex, key, iv) {
 
     return decrypted.toString('utf8');
   } catch {
-    throw new Error('Decryption failed (invalid password or corrupted data)');
+    throw new WilcoCryptError(
+      'Decryption failed (invalid password or corrupted data)',
+      'DECRYPTION_FAILED'
+    );
   }
 };
 
@@ -131,7 +166,7 @@ wilcocrypt._.unpackFromFile = function (filePath) {
  * @public
  * @param {string} filePath - Path to the input file
  * @param {string} password - Password used for key derivation (scrypt)
- * @throws {Error} If the input file cannot be read
+ * @throws {WilcoCryptError} If encryption fails
  */
 wilcocrypt.encryptFile = function (filePath, password) {
   const fileData = readFileSync(filePath, 'utf8');
@@ -159,19 +194,22 @@ wilcocrypt.encryptFile = function (filePath, password) {
  * @param {string} filePath - Path to the encrypted file
  * @param {string} password - Password used for key derivation (scrypt)
  * @returns {string} Decrypted file contents (UTF-8)
- * @throws {Error} If the version is missing or unsupported
- * @throws {Error} If the password is invalid or data is corrupted
+ * @throws {WilcoCryptError} If version is missing/unsupported or decryption fails
  */
 wilcocrypt.decryptFile = function (filePath, password) {
   const envelope = wilcocrypt._.unpackFromFile(filePath);
 
   if (!envelope.version) {
-    throw new Error('Missing Wilcocrypt version');
+    throw new WilcoCryptError(
+      'Missing WilcoCrypt version',
+      'MISSING_VERSION'
+    );
   }
 
   if (envelope.version !== wilcocrypt._.VERSION) {
-    throw new Error(
-      `Unsupported Wilcocrypt version: ${envelope.version}`
+    throw new WilcoCryptError(
+      `Unsupported WilcoCrypt version: ${envelope.version}`,
+      'UNSUPPORTED_VERSION'
     );
   }
 

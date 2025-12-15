@@ -10,9 +10,10 @@ It provides a clear public API for encrypting and decrypting files, while advanc
 - AES-256-CBC file encryption
 - Scrypt password-based key derivation
 - MessagePack + gzip for compact storage
-- Version support (`2.0.0`)
+- Version support
 - Safe error handling for wrong passwords or corrupted data
 - Clear separation between public API and internal helpers
+- Command-line interface (CLI) for quick file encryption/decryption
 
 ---
 
@@ -22,9 +23,14 @@ It provides a clear public API for encrypting and decrypting files, while advanc
 npm install wilcocrypt
 ```
 
+### CLI Installation
+```bash
+npm install -g wilcocrypt
+```
+
 ---
 
-## Usage
+## Usage (Node.js)
 
 ```js
 import wilcocrypt from 'wilcocrypt';
@@ -49,14 +55,38 @@ const encrypted = wilcocrypt._.encryptData('Hello', key, iv);
 
 ---
 
+## CLI Usage
+
+Once installed globally:
+
+```bash
+# Encrypt a file
+wilcocrypt -e document.txt
+wilcocrypt --encrypt document.txt
+
+# Decrypt a file
+wilcocrypt -d document.txt.enc
+wilcocrypt --decrypt document.txt.enc
+
+
+# Internal: unpack raw envelope
+wilcocrypt --unpack document.txt.enc
+```
+
+The CLI will securely prompt for a password (input is masked).
+
+---
+
 ## License
 
 WilcoCrypt is released under the **[GPL-3.0-only](https://www.gnu.org/licenses/gpl-3.0.html)** license.  
 
-In short:  
-- You may use, modify, and distribute the software  
-- Derived works must also be released under the same license  
-- No warranty; use at your own risk
+**In short:**  
+- You can use WilcoCrypt for personal, educational, or commercial purposes.  
+- You may modify the code and distribute your modifications.  
+- Any software that includes WilcoCrypt (or derivatives) must also be released under GPL-3.0-only.  
+- You **cannot** distribute it under a proprietary license.  
+- There is **no warranty**; use the software at your own risk.
 
 ---
 
