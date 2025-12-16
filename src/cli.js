@@ -1,7 +1,5 @@
-#!/usr/bin/env node
-
 import { Command } from 'commander';
-import wilcocrypt from './main.js';
+import wilcocrypt from './wilcocrypt.js';
 
 /* =========================
    Helpers
