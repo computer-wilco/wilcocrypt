@@ -10,6 +10,13 @@ function promptPassword(promptText = 'Password: ') {
     const stdin = process.stdin;
     const stdout = process.stdout;
 
+    if (!stdin.isTTY) {
+      throw new wilcocrypt._.WilcoCryptError(
+        'Password prompt requires a TTY',
+        'NO_TTY'
+      );
+    }
+    
     stdout.write(promptText);
 
     let password = '';
@@ -60,7 +67,7 @@ const program = new Command();
 
 program
   .name('wilcocrypt')
-  .description('File encryption tool (AES-256-CBC)')
+  .description('File encryption tool')
   .version(wilcocrypt._.VERSION, '--version', 'Show version')
 
   .option('-e, --encrypt <file>', 'Encrypt file')
@@ -108,7 +115,7 @@ if (actions.length > 1) {
     if (options.decrypt) {
       const password = await promptPassword('Decryption password: ');
       const result = wilcocrypt.decryptFile(options.decrypt, password);
-      console.log(`${result}`);
+      process.stdout.write(result);
       return;
     }
 

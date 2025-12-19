@@ -8,12 +8,12 @@
   "license": "GPL-3.0-only",
   "author": "Wilco Joosen",
   "type": "module",
-  "main": "main.js",
-  "bin": "cli.js",
+  "main": "dist/wilcocrypt.min.js",
+  "bin": "dist/cli.min.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "update": "npx -y Jelmerro/nus",
-    "build": "rollup -c && node src/scripts/chmod.js"
+    "build": "rollup -c && node src/scripts/fix-cli-min-import.js && node src/scripts/chmod.js"
   },
   "devDependencies": {
     "@msgpack/msgpack": "3.1.2",

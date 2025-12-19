@@ -1,19 +1,22 @@
 # WilcoCrypt
 
 **WilcoCrypt** is a simple and secure file encryption tool for Node.js.  
-It provides a clear public API for encrypting and decrypting files, while advanced users can access internal helpers via `wilcocrypt._` if needed.
+It offers both a clean programmatic API and a practical command-line interface (CLI) for everyday use.
+
+The library focuses on strong defaults, portability, and predictable behavior across environments
+(including low-end devices such as Raspberry Pi and Android/Termux).
 
 ---
 
 ## Features
 
-- AES-256-CBC file encryption
-- Scrypt password-based key derivation
-- MessagePack + gzip for compact storage
-- Version support
-- Safe error handling for wrong passwords or corrupted data
-- Clear separation between public API and internal helpers
-- Command-line interface (CLI) for quick file encryption/decryption
+- AES-256-GCM authenticated encryption
+- Password-based key derivation using scrypt
+- MessagePack + gzip for compact encrypted files
+- Built-in versioning and compatibility checks
+- Clear and consistent error handling
+- Clean separation between public API and internal helpers
+- Command-line interface (CLI) for quick file encryption and decryption
 
 ---
 
@@ -24,6 +27,7 @@ npm install wilcocrypt
 ```
 
 ### CLI Installation
+
 ```bash
 npm install -g wilcocrypt
 ```
@@ -43,14 +47,17 @@ const content = wilcocrypt.decryptFile('document.txt.enc', 'myStrongPassword');
 console.log(content);
 ```
 
-### Internal functions (optional)
+---
 
-Advanced users can access internal helpers via `wilcocrypt._`:
+## Internal helpers (optional)
+
+Advanced users can access internal helpers via `wilcocrypt._`.
+These APIs are considered internal and may change between versions.
 
 ```js
 const iv = Buffer.from('...');
 const key = Buffer.from('...');
-const encrypted = wilcocrypt._.encryptData('Hello', key, iv);
+const encrypted = wilcocrypt._.encryptData(Buffer.from('Hello'), key, iv);
 ```
 
 ---
@@ -68,8 +75,7 @@ wilcocrypt --encrypt document.txt
 wilcocrypt -d document.txt.enc
 wilcocrypt --decrypt document.txt.enc
 
-
-# Internal: unpack raw envelope
+# Internal: unpack raw encrypted envelope
 wilcocrypt --unpack document.txt.enc
 ```
 
@@ -77,20 +83,29 @@ The CLI will securely prompt for a password (input is masked).
 
 ---
 
-## License
-
-WilcoCrypt is released under the **[GPL-3.0-only](https://www.gnu.org/licenses/gpl-3.0.html)** license.  
-
-**In short:**  
-- You can use WilcoCrypt for personal, educational, or commercial purposes.  
-- You may modify the code and distribute your modifications.  
-- Any software that includes WilcoCrypt (or derivatives) must also be released under GPL-3.0-only.  
-- You **cannot** distribute it under a proprietary license.  
-- There is **no warranty**; use the software at your own risk.
-
----
-
 ## Version
 
 - Current version: **2.0.0**
-- Version 1.0.0 is deprecated; do not use it
+- Version 1.x is deprecated and should not be used
+
+---
+
+## License
+
+WilcoCrypt is released under the **GPL-3.0-only** license.
+
+You are free to:
+- Use the software for any purpose
+- Study how it works and modify it
+- Redistribute the software
+- Distribute modified versions
+
+Under the condition that:
+- Any distributed derivative work is also licensed under GPL-3.0-only
+- The source code remains available to users
+
+This software is provided **without any warranty**.
+Use it at your own risk.
+
+For full license text, see:
+https://www.gnu.org/licenses/gpl-3.0.html

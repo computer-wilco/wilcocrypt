@@ -3,7 +3,14 @@ import { encode as msgpack_encode, decode as msgpack_decode } from '@msgpack/msg
 import { gzipSync, gunzipSync } from 'zlib';
 import { readFileSync, writeFileSync } from 'fs';
 
+/**
+ * Main WilcoCrypt namespace.
+ */
 const wilcocrypt = {};
+
+/**
+ * Internal WilcoCrypt utilities and constants.
+ */
 wilcocrypt._ = {};
 
 /* =========================
@@ -11,13 +18,12 @@ wilcocrypt._ = {};
 ========================= */
 
 /**
- * Custom error type for WilcoCrypt.
- * All library-specific errors throw this error.
+ * Custom error class for all WilcoCrypt-specific errors.
  */
 class WilcoCryptError extends Error {
   /**
    * @param {string} message - Human-readable error message
-   * @param {string} [code] - Optional machine-readable error code
+   * @param {string} [code=WILCOCRYPT_ERROR] - Machine-readable error code
    */
   constructor(message, code = 'WILCOCRYPT_ERROR') {
     super(message);
@@ -37,24 +43,28 @@ wilcocrypt._.WilcoCryptError = WilcoCryptError;
 ========================= */
 
 /**
- * Internal Wilcocrypt version.
- * Used for compatibility checks during decryption.
- * @private
+ * Internal WilcoCrypt version.
+ * Must match exactly during decryption.
  * @type {string}
  */
 wilcocrypt._.VERSION = '2.0.0';
+
+/**
+ * Minimum allowed password length.
+ * @type {number}
+ */
+wilcocrypt._.MIN_PASSWORD_LENGTH = 6;
 
 /* =========================
    Internal helpers
 ========================= */
 
 /**
- * Validates AES-256-CBC key and IV buffers.
+ * Validates AES-256-GCM key and IV.
  *
- * @private
- * @param {Buffer} key - 32-byte encryption key
- * @param {Buffer} iv - 16-byte initialization vector
- * @throws {WilcoCryptError} If key or IV are invalid
+ * @param {Buffer} key
+ * @param {Buffer} iv
+ * @throws {WilcoCryptError}
  */
 wilcocrypt._.assertKeyAndIv = function (key, iv) {
   if (!Buffer.isBuffer(key) || key.length !== 32) {
@@ -63,12 +73,46 @@ wilcocrypt._.assertKeyAndIv = function (key, iv) {
       'INVALID_KEY'
     );
   }
-  if (!Buffer.isBuffer(iv) || iv.length !== 16) {
+
+  if (!Buffer.isBuffer(iv) || iv.length !== 12) {
     throw new WilcoCryptError(
-      'Invalid IV (expected 16-byte Buffer)',
+      'Invalid IV (expected 12-byte Buffer for GCM)',
       'INVALID_IV'
     );
   }
+};
+
+/**
+ * Validates password strength.
+ *
+ * @param {string} password
+ * @throws {WilcoCryptError}
+ */
+wilcocrypt._.assertPassword = function (password) {
+  if (typeof password !== 'string' || password.length < wilcocrypt._.MIN_PASSWORD_LENGTH) {
+    throw new WilcoCryptError(
+      `Password must be at least ${wilcocrypt._.MIN_PASSWORD_LENGTH} characters`,
+      'WEAK_PASSWORD'
+    );
+  }
+};
+
+/**
+ * Constant-time buffer comparison.
+ * Reserved for future extensions.
+ *
+ * @param {Buffer} a
+ * @param {Buffer} b
+ * @returns {boolean}
+ */
+wilcocrypt._.constantTimeEqual = function (a, b) {
+  if (a.length !== b.length) return false;
+
+  let result = 0;
+  for (let i = 0; i < a.length; i++) {
+    result |= a[i] ^ b[i];
+  }
+  return result === 0;
 };
 
 /* =========================
@@ -76,50 +120,51 @@ wilcocrypt._.assertKeyAndIv = function (key, iv) {
 ========================= */
 
 /**
- * Encrypts plaintext using AES-256-CBC.
+ * Encrypts raw data using AES-256-GCM.
  *
- * @private
- * @param {string} plainText - UTF-8 plaintext
- * @param {Buffer} key - 32-byte encryption key
- * @param {Buffer} iv - 16-byte initialization vector
- * @returns {string} Encrypted data as a hex string
+ * @param {Buffer} plainData
+ * @param {Buffer} key
+ * @param {Buffer} iv
+ * @returns {{ciphertext: Buffer, authTag: Buffer}}
  */
-wilcocrypt._.encryptData = function (plainText, key, iv) {
+wilcocrypt._.encryptData = function (plainData, key, iv) {
   wilcocrypt._.assertKeyAndIv(key, iv);
 
-  const cipher = createCipheriv('aes-256-cbc', key, iv);
+  const cipher = createCipheriv('aes-256-gcm', key, iv);
   const encrypted = Buffer.concat([
-    cipher.update(plainText, 'utf8'),
+    cipher.update(plainData),
     cipher.final()
   ]);
 
-  return encrypted.toString('hex');
+  return {
+    ciphertext: encrypted,
+    authTag: cipher.getAuthTag()
+  };
 };
 
 /**
- * Decrypts AES-256-CBC encrypted hex data.
+ * Decrypts AES-256-GCM encrypted data.
  *
- * @private
- * @param {string} cipherHex - Encrypted data as hex string
- * @param {Buffer} key - 32-byte encryption key
- * @param {Buffer} iv - 16-byte initialization vector
- * @returns {string} Decrypted UTF-8 plaintext
- * @throws {WilcoCryptError} If decryption fails
+ * @param {string} cipherHex
+ * @param {string} authTagHex
+ * @param {Buffer} key
+ * @param {Buffer} iv
+ * @returns {Buffer}
  */
-wilcocrypt._.decryptData = function (cipherHex, key, iv) {
+wilcocrypt._.decryptData = function (cipherHex, authTagHex, key, iv) {
   wilcocrypt._.assertKeyAndIv(key, iv);
 
   try {
-    const decipher = createDecipheriv('aes-256-cbc', key, iv);
-    const decrypted = Buffer.concat([
+    const decipher = createDecipheriv('aes-256-gcm', key, iv);
+    decipher.setAuthTag(Buffer.from(authTagHex, 'hex'));
+
+    return Buffer.concat([
       decipher.update(Buffer.from(cipherHex, 'hex')),
       decipher.final()
     ]);
-
-    return decrypted.toString('utf8');
   } catch {
     throw new WilcoCryptError(
-      'Decryption failed (invalid password or corrupted data)',
+      'Decryption failed (invalid password, corrupted data, or tampered file)',
       'DECRYPTION_FAILED'
     );
   }
@@ -130,12 +175,10 @@ wilcocrypt._.decryptData = function (cipherHex, key, iv) {
 ========================= */
 
 /**
- * Packs an object using MessagePack and gzip compression,
- * then writes it to disk.
+ * Packs an object using MessagePack + gzip and writes it to disk.
  *
- * @private
- * @param {Object} data - Serializable object
- * @param {string} filePath - Output file path
+ * @param {Object} data
+ * @param {string} filePath
  */
 wilcocrypt._.packToFile = function (data, filePath) {
   const packed = msgpack_encode(data);
@@ -144,11 +187,10 @@ wilcocrypt._.packToFile = function (data, filePath) {
 };
 
 /**
- * Reads a packed Wilcocrypt file from disk and unpacks it.
+ * Reads and unpacks a WilcoCrypt file from disk.
  *
- * @private
- * @param {string} filePath - Input file path
- * @returns {Object} Unpacked object
+ * @param {string} filePath
+ * @returns {Object}
  */
 wilcocrypt._.unpackFromFile = function (filePath) {
   const file = readFileSync(filePath);
@@ -161,24 +203,25 @@ wilcocrypt._.unpackFromFile = function (filePath) {
 ========================= */
 
 /**
- * Encrypts a UTF-8 text file and writes an encrypted `.enc` file to disk.
+ * Encrypts a file and writes a `.enc` file to disk.
  *
- * @public
- * @param {string} filePath - Path to the input file
- * @param {string} password - Password used for key derivation (scrypt)
- * @throws {WilcoCryptError} If encryption fails
+ * @param {string} filePath
+ * @param {string} password
  */
 wilcocrypt.encryptFile = function (filePath, password) {
-  const fileData = readFileSync(filePath, 'utf8');
+  wilcocrypt._.assertPassword(password);
 
-  const iv = randomBytes(16);
+  const fileData = readFileSync(filePath);
+  const iv = randomBytes(12);
   const salt = randomBytes(16);
+
   const key = scryptSync(password, salt, 32);
 
-  const encrypted = wilcocrypt._.encryptData(fileData, key, iv);
+  const { ciphertext, authTag } = wilcocrypt._.encryptData(fileData, key, iv);
 
   const envelope = {
-    payload: encrypted,
+    payload: ciphertext.toString('hex'),
+    authTag: authTag.toString('hex'),
     salt: salt.toString('hex'),
     iv: iv.toString('hex'),
     version: wilcocrypt._.VERSION
@@ -188,23 +231,16 @@ wilcocrypt.encryptFile = function (filePath, password) {
 };
 
 /**
- * Decrypts a Wilcocrypt `.enc` file and returns its plaintext contents.
+ * Decrypts a `.enc` file and returns its contents.
  *
- * @public
- * @param {string} filePath - Path to the encrypted file
- * @param {string} password - Password used for key derivation (scrypt)
- * @returns {string} Decrypted file contents (UTF-8)
- * @throws {WilcoCryptError} If version is missing/unsupported or decryption fails
+ * @param {string} filePath
+ * @param {string} password
+ * @returns {Buffer}
  */
 wilcocrypt.decryptFile = function (filePath, password) {
-  const envelope = wilcocrypt._.unpackFromFile(filePath);
+  wilcocrypt._.assertPassword(password);
 
-  if (!envelope.version) {
-    throw new WilcoCryptError(
-      'Missing WilcoCrypt version',
-      'MISSING_VERSION'
-    );
-  }
+  const envelope = wilcocrypt._.unpackFromFile(filePath);
 
   if (envelope.version !== wilcocrypt._.VERSION) {
     throw new WilcoCryptError(
@@ -213,10 +249,25 @@ wilcocrypt.decryptFile = function (filePath, password) {
     );
   }
 
-  const key = scryptSync(password, Buffer.from(envelope.salt, 'hex'), 32);
-  const iv = Buffer.from(envelope.iv, 'hex');
+  if (!envelope.payload || !envelope.authTag || !envelope.salt || !envelope.iv) {
+    throw new WilcoCryptError(
+      'Corrupted encrypted file (missing required fields)',
+      'CORRUPTED_FILE'
+    );
+  }
 
-  return wilcocrypt._.decryptData(envelope.payload, key, iv);
+  const key = scryptSync(
+    password,
+    Buffer.from(envelope.salt, 'hex'),
+    32
+  );
+
+  return wilcocrypt._.decryptData(
+    envelope.payload,
+    envelope.authTag,
+    key,
+    Buffer.from(envelope.iv, 'hex')
+  );
 };
 
 export default wilcocrypt;
