@@ -13,7 +13,10 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "update": "npx -y Jelmerro/nus",
-    "build": "rollup -c && node src/scripts/fix-cli-min-import.js && node src/scripts/chmod.js"
+    "rollup": "rollup -c && node src/scripts/fix-cli-min-import.js && node src/scripts/chmod.js",
+    "sea": "node --experimental-sea-config sea/sea-config.json && cp $(command -v node) sea/wilcocrypt && npx postject sea/wilcocrypt NODE_SEA_BLOB sea/wilcocrypt.sea --sentinel-fuse NODE_SEA_FUSE_fce680ab2cc467b6e072b8b5df1996b2",
+    "clean": "rm -rf dist && rm -rf sea/wilcocrypt*",
+    "build": "npm run rollup && npm run sea"
   },
   "devDependencies": {
     "@msgpack/msgpack": "3.1.2",

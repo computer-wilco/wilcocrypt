@@ -138,3 +138,5 @@ test*
 
 # Build
 dist
+sea/wilcocrypt.sea
+sea/wilcocrypt

@@ -1,0 +1,5 @@
+{
+  "main": "./dist/cli.min.cjs",
+  "output": "./sea/wilcocrypt.sea",
+  "disableExperimentalSEAWarning": true
+}
