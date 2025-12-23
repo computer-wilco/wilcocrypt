@@ -140,3 +140,5 @@ test*
 dist
 sea/wilcocrypt.sea
 sea/wilcocrypt
+node-binaries
+release

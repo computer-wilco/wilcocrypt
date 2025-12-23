@@ -144,3 +144,5 @@ src*
 # Build output
 sea/wilcocrypt.sea
 sea/wilcocrypt
+node-binaries
+release

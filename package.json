@@ -14,9 +14,14 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "update": "npx -y Jelmerro/nus",
     "rollup": "rollup -c && node src/scripts/fix-cli-min-import.js && node src/scripts/chmod.js",
-    "sea": "node --experimental-sea-config sea/sea-config.json && cp $(command -v node) sea/wilcocrypt && npx postject sea/wilcocrypt NODE_SEA_BLOB sea/wilcocrypt.sea --sentinel-fuse NODE_SEA_FUSE_fce680ab2cc467b6e072b8b5df1996b2",
-    "clean": "rm -rf dist && rm -rf sea/wilcocrypt*",
-    "build": "npm run rollup && npm run sea"
+    "sea:blob": "node --experimental-sea-config sea/sea-config.json",
+    "sea:linux-x64": "cp node-binaries/linux-x64/node release/wilcocrypt-linux-x64 && npx postject release/wilcocrypt-linux-x64 NODE_SEA_BLOB sea/wilcocrypt.sea --sentinel-fuse NODE_SEA_FUSE_fce680ab2cc467b6e072b8b5df1996b2 && chmod +x release/wilcocrypt-linux-x64",
+    "sea:linux-arm64": "cp node-binaries/linux-arm64/node release/wilcocrypt-linux-arm64 && npx postject release/wilcocrypt-linux-arm64 NODE_SEA_BLOB sea/wilcocrypt.sea --sentinel-fuse NODE_SEA_FUSE_fce680ab2cc467b6e072b8b5df1996b2 && chmod +x release/wilcocrypt-linux-arm64",
+    "sea:windows-x64": "cp node-binaries/windows-x64/node.exe release/wilcocrypt-windows-x64.exe && npx postject release/wilcocrypt-windows-x64.exe NODE_SEA_BLOB sea/wilcocrypt.sea --sentinel-fuse NODE_SEA_FUSE_fce680ab2cc467b6e072b8b5df1996b2",
+    "sea:macos-x64": "cp node-binaries/macos-x64/node release/wilcocrypt-macos-x64 && npx postject release/wilcocrypt-macos-x64 NODE_SEA_BLOB sea/wilcocrypt.sea --sentinel-fuse NODE_SEA_FUSE_fce680ab2cc467b6e072b8b5df1996b2 && chmod +x release/wilcocrypt-macos-x64",
+    "sea:macos-arm64": "cp node-binaries/macos-arm64/node release/wilcocrypt-macos-arm64 && npx postject release/wilcocrypt-macos-arm64 NODE_SEA_BLOB sea/wilcocrypt.sea --sentinel-fuse NODE_SEA_FUSE_fce680ab2cc467b6e072b8b5df1996b2 && chmod +x release/wilcocrypt-macos-arm64",
+    "build": "npm run rollup && npm run sea:blob && npm run sea:linux-x64 && npm run sea:linux-arm64 && npm run sea:windows-x64 && npm run sea:macos-x64 && npm run sea:macos-arm64",
+    "clean": "rm -rf dist && rm -rf sea/wilcocrypt.sea && rm -rf release/*"
   },
   "devDependencies": {
     "@msgpack/msgpack": "3.1.2",
