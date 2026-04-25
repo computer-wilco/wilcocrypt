@@ -10,7 +10,7 @@
   "type": "module",
   "main": "dist/wilcocrypt.min.js",
   "bin": "dist/cli.min.js",
-    "scripts": {
+  "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "update": "npx -y Jelmerro/nus",
     "rollup": "rollup -c && node src/scripts/fix-cli-min-import.js && node src/scripts/chmod.js",
@@ -24,12 +24,12 @@
     "clean": "rm -rf dist && rm -rf sea/*.sea && rm -rf release/*"
   },
   "devDependencies": {
-    "@msgpack/msgpack": "3.1.2",
-    "@rollup/plugin-commonjs": "29.0.0",
+    "@rollup/plugin-commonjs": "29.0.2",
     "@rollup/plugin-node-resolve": "16.0.3",
     "@rollup/plugin-replace": "6.0.3",
-    "@rollup/plugin-terser": "0.4.4",
-    "commander": "14.0.2",
-    "rollup": "4.54.0"
+    "@rollup/plugin-terser": "1.0.0",
+    "commander": "14.0.3",
+    "notepack.io": "3.0.1",
+    "rollup": "4.60.2"
   }
 }

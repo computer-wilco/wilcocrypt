@@ -72,7 +72,6 @@ program
 
   .option('-e, --encrypt <file>', 'Encrypt file')
   .option('-d, --decrypt <file>', 'Decrypt file')
-  .option('--unpack <file>', '[internal] Unpack encrypted file and print raw envelope')
 
   .helpOption('-h, --help', 'Display help');
 
@@ -116,12 +115,6 @@ if (actions.length > 1) {
       const password = await promptPassword('Decryption password: ');
       const result = wilcocrypt.decryptFile(options.decrypt, password);
       process.stdout.write(result);
-      return;
-    }
-
-    if (options.unpack) {
-      const envelope = wilcocrypt._.unpackFromFile(options.unpack);
-      console.log(JSON.stringify(envelope, null, 2));
       return;
     }
   } catch (err) {
