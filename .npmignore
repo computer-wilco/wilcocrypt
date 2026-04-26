@@ -136,13 +136,11 @@ vite.config.ts.timestamp-*
 # Test files
 test*
 
-
-# Source code
-src
-src*
-
-# Build output
-sea/wilcocrypt.sea
-sea/wilcocrypt
+# Build
+src/scripts
+sea
+sea*
 node-binaries
 release
+dist
+rollup.config.js

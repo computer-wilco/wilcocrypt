@@ -1,15 +1,17 @@
 {
   "name": "wilcocrypt",
-  "version": "2.1.0",
+  "version": "2.1.1",
   "description": "A encrypting tool",
   "keywords": [
-    "encrypting"
+    "encrypting",
+    "crypto"
   ],
   "license": "GPL-3.0-only",
-  "author": "Wilco Joosen",
+  "author": "computerwilco",
   "type": "module",
-  "main": "dist/wilcocrypt.min.js",
-  "bin": "dist/cli.min.js",
+  "main": "src/wilcocrypt.js",
+  "bin": "src/cli.js",
+  "types": "types/wilcocrypt.d.ts",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "update": "npx -y Jelmerro/nus",
@@ -23,13 +25,15 @@
     "build": "npm run rollup && npm run sea:blob && npm run sea:linux-x64 && npm run sea:linux-arm64 && npm run sea:windows-x64 && npm run sea:macos-x64 && npm run sea:macos-arm64",
     "clean": "rm -rf dist && rm -rf sea/*.sea && rm -rf release/*"
   },
+  "dependencies": {
+    "commander": "14.0.3",
+    "notepack.io": "3.0.1"
+  },
   "devDependencies": {
     "@rollup/plugin-commonjs": "29.0.2",
     "@rollup/plugin-node-resolve": "16.0.3",
     "@rollup/plugin-replace": "6.0.3",
     "@rollup/plugin-terser": "1.0.0",
-    "commander": "14.0.3",
-    "notepack.io": "3.0.1",
     "rollup": "4.60.2"
   }
 }

@@ -47,7 +47,7 @@ wilcocrypt._.WilcoCryptError = WilcoCryptError;
  * Must match exactly during decryption.
  * @type {string}
  */
-wilcocrypt._.VERSION = '2.1.0';
+wilcocrypt._.VERSION = '2.1.1';
 
 /**
  * Minimum allowed password length.
@@ -174,6 +174,15 @@ wilcocrypt._.decryptData = function (cipherHex, authTagHex, key, iv) {
    Public API
 ========================= */
 
+/**
+ * Encrypts data using password-based AES-256-GCM.
+ *
+ * @param {Buffer} plaindata - Raw data to encrypt
+ * @param {string} password - Password used for key derivation
+ * @param {boolean} [gzip=true] - Whether to compress data before encryption
+ * @returns {Buffer} MessagePack-encoded encrypted payload
+ * @throws {WilcoCryptError} If password is invalid
+ */
 wilcocrypt.encryptData = function (plaindata, password, gzip = true) {
     wilcocrypt._.assertPassword(password);
 
@@ -202,6 +211,15 @@ wilcocrypt.encryptData = function (plaindata, password, gzip = true) {
     return msgpack_encode(envelope);
 };
 
+/**
+ * Decrypts encrypted data using password-based AES-256-GCM.
+ *
+ * @param {Buffer} encryptedData - MessagePack-encoded encrypted payload
+ * @param {string} password - Password used for decryption
+ * @param {boolean} [gzip=true] - Whether to decompress after decryption
+ * @returns {Buffer} Decrypted raw data
+ * @throws {WilcoCryptError} On invalid format, wrong password, version mismatch, or decompression failure
+ */
 wilcocrypt.decryptData = function (encryptedData, password, gzip = true) {
     wilcocrypt._.assertPassword(password);
     
@@ -245,12 +263,30 @@ wilcocrypt.decryptData = function (encryptedData, password, gzip = true) {
     }
 };
 
+/**
+ * Encrypts a file and writes the result to `<filePath>.enc`.
+ *
+ * @param {string} filePath - Path to the file to encrypt
+ * @param {string} password - Password used for encryption
+ * @param {boolean} [gzip=true] - Whether to compress before encryption
+ * @returns {void}
+ * @throws {WilcoCryptError} If password is invalid
+ */
 wilcocrypt.encryptFile = function (filePath, password, gzip = true) {
     const fileData = readFileSync(filePath);
     const encryptedData = wilcocrypt.encryptData(fileData, password, gzip);
     writeFileSync(`${filePath}.enc`, encryptedData);
 };
 
+/**
+ * Decrypts an encrypted `.enc` file.
+ *
+ * @param {string} filePath - Path to the `.enc` file
+ * @param {string} password - Password used for decryption
+ * @param {boolean} [gzip=true] - Whether to decompress after decryption
+ * @returns {Buffer} Decrypted file contents
+ * @throws {WilcoCryptError} If file extension is invalid or decryption fails
+ */
 wilcocrypt.decryptFile = function (filePath, password, gzip = true) {
     if (!filePath.endsWith('.enc')) {
         throw new WilcoCryptError(
