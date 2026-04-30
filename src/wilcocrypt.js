@@ -1,5 +1,4 @@
 import { randomBytes, scryptSync, createCipheriv, createDecipheriv } from 'crypto';
-import { encode as msgpackencode, decode as msgpackdecode } from 'notepack.io';
 import { gzipSync, gunzipSync } from 'zlib';
 import { readFileSync, writeFileSync } from 'fs';
 
@@ -54,6 +53,12 @@ wilcocrypt._.VERSION = '2.1.1';
  * @type {number}
  */
 wilcocrypt._.MIN_PASSWORD_LENGTH = 6;
+
+/**
+ * Internal header for encrypted payloads.
+ * @type {Buffer}
+ */
+wilcocrypt._.HEADER = Buffer.from([23, 9, 12, 3, 15, 3, 18, 25, 16, 20]);
 
 /* =========================
    Internal helpers
@@ -145,21 +150,21 @@ wilcocrypt._.encryptData = function (plainData, key, iv) {
 /**
  * Decrypts AES-256-GCM encrypted data.
  *
- * @param {string} cipherHex
- * @param {string} authTagHex
+ * @param {Buffer} cipherBuffer
+ * @param {Buffer} authTagBuffer
  * @param {Buffer} key
  * @param {Buffer} iv
  * @returns {Buffer}
  */
-wilcocrypt._.decryptData = function (cipherHex, authTagHex, key, iv) {
+wilcocrypt._.decryptData = function (cipherBuffer, authTagBuffer, key, iv) {
   wilcocrypt._.assertKeyAndIv(key, iv);
 
   try {
     const decipher = createDecipheriv('aes-256-gcm', key, iv);
-    decipher.setAuthTag(Buffer.from(authTagHex, 'hex'));
+    decipher.setAuthTag(authTagBuffer);
 
     return Buffer.concat([
-      decipher.update(Buffer.from(cipherHex, 'hex')),
+      decipher.update(cipherBuffer),
       decipher.final()
     ]);
   } catch {
@@ -180,19 +185,13 @@ wilcocrypt._.decryptData = function (cipherHex, authTagHex, key, iv) {
  * @param {Buffer} plaindata - Raw data to encrypt
  * @param {string} password - Password used for key derivation
  * @param {boolean} [gzip=true] - Whether to compress data before encryption
- * @returns {Buffer} MessagePack-encoded encrypted payload
+ * @returns {Buffer} Binary-encoded encrypted payload
  * @throws {WilcoCryptError} If password is invalid
  */
 wilcocrypt.encryptData = function (plaindata, password, gzip = true) {
   wilcocrypt._.assertPassword(password);
 
-  let gzipData;
-  if (gzip) {
-    gzipData = gzipSync(plaindata);
-  } else {
-    gzipData = plaindata;
-  }
-
+  const gzipData = gzip ? gzipSync(plaindata) : plaindata;
   const iv = randomBytes(12);
   const salt = randomBytes(16);
 
@@ -200,67 +199,43 @@ wilcocrypt.encryptData = function (plaindata, password, gzip = true) {
 
   const { ciphertext, authTag } = wilcocrypt._.encryptData(gzipData, key, iv);
 
-  const envelope = {
-    payload: ciphertext.toString('hex'),
-    authTag: authTag.toString('hex'),
-    salt: salt.toString('hex'),
-    iv: iv.toString('hex'),
-    version: wilcocrypt._.VERSION
-  };
-
-  return msgpackencode(envelope);
+  return Buffer.concat([
+    wilcocrypt._.HEADER, // 10 bytes
+    salt, // 16 bytes
+    iv, // 12 bytes
+    authTag, // 16 bytes
+    ciphertext // the rest
+  ]);
 };
 
 /**
  * Decrypts encrypted data using password-based AES-256-GCM.
  *
- * @param {Buffer} encryptedData - MessagePack-encoded encrypted payload
+ * @param {Buffer} encryptedData - Binary-encoded encrypted payload
  * @param {string} password - Password used for decryption
  * @param {boolean} [gzip=true] - Whether to decompress after decryption
  * @returns {Buffer} Decrypted raw data
  * @throws {WilcoCryptError} On invalid format, wrong password, version mismatch, or decompression failure
  */
-wilcocrypt.decryptData = function (encryptedData, password, gzip = true) {
+wilcocrypt.decryptData = function (encryptedBuffer, password, gzip = true) {
   wilcocrypt._.assertPassword(password);
 
-  let envelope;
-  try {
-    envelope = msgpackdecode(encryptedData);
-  } catch {
-    throw new WilcoCryptError(
-      'Invalid encrypted data format (not MessagePack)',
-      'INVALID_FORMAT'
-    );
+  const fileHeader = encryptedBuffer.subarray(0, 10);
+  if (!fileHeader.equals(wilcocrypt._.HEADER)) {
+    throw new WilcoCryptError('Invalid WilcoCrypt header', 'INVALID_HEADER');
   }
 
-  if (envelope.version !== wilcocrypt._.VERSION) {
-    throw new WilcoCryptError(
-            `Version mismatch (expected ${wilcocrypt._.VERSION}, got ${envelope.version})`,
-            'VERSION_MISMATCH'
-    );
-  }
+  let offset = 10;
+  const salt = encryptedBuffer.subarray(offset, offset += 16);
+  const iv = encryptedBuffer.subarray(offset, offset += 12);
+  const authTag = encryptedBuffer.subarray(offset, offset += 16);
+  const ciphertext = encryptedBuffer.subarray(offset);
 
-  const key = scryptSync(password, Buffer.from(envelope.salt, 'hex'), 32);
+  const key = scryptSync(password, salt, 32);
 
-  const decrypted = wilcocrypt._.decryptData(
-    envelope.payload,
-    envelope.authTag,
-    key,
-    Buffer.from(envelope.iv, 'hex')
-  );
+  const decrypted = wilcocrypt._.decryptData(ciphertext, authTag, key, iv);
 
-  try {
-    if (gzip) {
-      return gunzipSync(decrypted);
-    } else {
-      return decrypted;
-    }
-  } catch {
-    throw new WilcoCryptError(
-      'Decryption succeeded but decompression failed (data may be corrupted or not compressed)',
-      'DECOMPRESSION_FAILED'
-    );
-  }
+  return gzip ? gunzipSync(decrypted) : decrypted;
 };
 
 /**

@@ -14,17 +14,6 @@ export class WilcoCryptError extends Error {
 }
 
 /**
- * Internal encrypted envelope structure.
- */
-export interface EncryptResultEnvelope {
-  payload: string;
-  authTag: string;
-  salt: string;
-  iv: string;
-  version: string;
-}
-
-/**
  * Internal helper namespace used by WilcoCrypt.
  */
 export interface InternalNamespace {
@@ -37,6 +26,11 @@ export interface InternalNamespace {
    * Minimum allowed password length.
    */
   MIN_PASSWORD_LENGTH: number;
+
+  /**
+   * Internal header used to identify valid WilcoCrypt payloads.
+   */
+  HEADER: Buffer;
 
   /**
    * Internal error class used by WilcoCrypt.
@@ -74,8 +68,8 @@ export interface InternalNamespace {
    * Decrypts AES-256-GCM encrypted data.
    */
   decryptData(
-    cipherHex: string,
-    authTagHex: string,
+    cipherBuffer: Buffer,
+    authTagBuffer: Buffer,
     key: Buffer,
     iv: Buffer
   ): Buffer;
@@ -90,10 +84,13 @@ export interface WilcoCrypt {
   /**
    * Encrypts data using password-based AES-256-GCM.
    *
+   * Output format:
+   * [HEADER (10 bytes)] + [salt (16)] + [iv (12)] + [authTag (16)] + [ciphertext]
+   *
    * @param plaindata Raw data to encrypt
    * @param password Password used for key derivation
    * @param gzip Whether to compress data before encryption (default: true)
-   * @returns MessagePack-encoded encrypted payload
+   * @returns Binary-encoded encrypted payload
    */
   encryptData(
     plaindata: Buffer,
@@ -104,9 +101,18 @@ export interface WilcoCrypt {
   /**
    * Decrypts encrypted data using password-based AES-256-GCM.
    *
-   * @param encryptedData MessagePack-encoded encrypted payload
+   * Validates internal header and extracts:
+   * salt, iv, authTag and ciphertext from the binary payload.
+   *
+   * @param encryptedData Binary-encoded encrypted payload
    * @param password Password used for decryption
    * @param gzip Whether to decompress after decryption (default: true)
+   * @returns Decrypted raw data
+   *
+   * @throws WilcoCryptError on:
+   * - invalid header
+   * - wrong password
+   * - corrupted data
    */
   decryptData(
     encryptedData: Buffer,
