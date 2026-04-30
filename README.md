@@ -1,5 +1,7 @@
 # WilcoCrypt
 
+[![js-semistandard-style](https://img.shields.io/badge/code%20style-semistandard-brightgreen.svg)](https://github.com/standard/semistandard)
+
 **WilcoCrypt** is a small, secure, and predictable encryption library for Node.js.
 
 It is designed around strong defaults, minimal dependencies, and consistent behavior across environments — from servers to low-end devices like Raspberry Pi.

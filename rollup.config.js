@@ -12,6 +12,10 @@ export default defineConfig({
     format: 'cjs',
     banner: '#!/usr/bin/env node'
   },
+  external: [
+    ...builtinModules,
+    ...builtinModules.map((mod) => `node:${mod}`)
+  ],
   plugins: [
     nodeResolve({ preferBuiltins: true }),
     commonjs(),

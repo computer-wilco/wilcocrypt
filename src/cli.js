@@ -5,7 +5,7 @@ import wilcocrypt from './wilcocrypt.js';
    Helpers
 ========================= */
 
-function promptPassword(promptText = 'Password: ') {
+function promptPassword (promptText = 'Password: ') {
   return new Promise((resolve) => {
     const stdin = process.stdin;
     const stdout = process.stdout;
@@ -16,7 +16,7 @@ function promptPassword(promptText = 'Password: ') {
         'NO_TTY'
       );
     }
-    
+
     stdout.write(promptText);
 
     let password = '';
@@ -25,7 +25,7 @@ function promptPassword(promptText = 'Password: ') {
     stdin.resume();
     stdin.setEncoding('utf8');
 
-    function onData(char) {
+    function onData (char) {
       if (char === '\r' || char === '\n') {
         stdout.write('\n');
         stdin.setRawMode(false);
@@ -115,7 +115,6 @@ if (actions.length > 1) {
       const password = await promptPassword('Decryption password: ');
       const result = wilcocrypt.decryptFile(options.decrypt, password);
       process.stdout.write(result);
-      return;
     }
   } catch (err) {
     console.error(`error: ${err.message}`);

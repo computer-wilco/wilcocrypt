@@ -11,8 +11,8 @@ if (!existsSync(cliMinPath)) {
 
 let code = readFileSync(cliMinPath, 'utf8');
 
-const from = `./wilcocrypt.js`;
-const to = `./wilcocrypt.min.js`;
+const from = './wilcocrypt.js';
+const to = './wilcocrypt.min.js';
 
 if (!code.includes(from)) {
   process.exit(0);

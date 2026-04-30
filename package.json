@@ -13,7 +13,9 @@
   "bin": "src/cli.js",
   "types": "types/wilcocrypt.d.ts",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "node src/cli.js",
+    "lint": "npx semistandard",
+    "lint:fix": "npx semistandard --fix",
     "update": "npx -y Jelmerro/nus",
     "rollup": "rollup -c && node src/scripts/fix-cli-min-import.js && node src/scripts/chmod.js",
     "sea:blob": "node src/scripts/sea-blob.js",
@@ -34,6 +36,7 @@
     "@rollup/plugin-node-resolve": "16.0.3",
     "@rollup/plugin-replace": "6.0.3",
     "@rollup/plugin-terser": "1.0.0",
-    "rollup": "4.60.2"
+    "rollup": "4.60.2",
+    "semistandard": "17.0.0"
   }
 }

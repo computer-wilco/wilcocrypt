@@ -1,5 +1,5 @@
 import { randomBytes, scryptSync, createCipheriv, createDecipheriv } from 'crypto';
-import { encode as msgpack_encode, decode as msgpack_decode } from 'notepack.io';
+import { encode as msgpackencode, decode as msgpackdecode } from 'notepack.io';
 import { gzipSync, gunzipSync } from 'zlib';
 import { readFileSync, writeFileSync } from 'fs';
 
@@ -25,7 +25,7 @@ class WilcoCryptError extends Error {
    * @param {string} message - Human-readable error message
    * @param {string} [code=WILCOCRYPT_ERROR] - Machine-readable error code
    */
-  constructor(message, code = 'WILCOCRYPT_ERROR') {
+  constructor (message, code = 'WILCOCRYPT_ERROR') {
     super(message);
     this.name = 'WilcoCryptError';
     this.code = code;
@@ -184,31 +184,31 @@ wilcocrypt._.decryptData = function (cipherHex, authTagHex, key, iv) {
  * @throws {WilcoCryptError} If password is invalid
  */
 wilcocrypt.encryptData = function (plaindata, password, gzip = true) {
-    wilcocrypt._.assertPassword(password);
+  wilcocrypt._.assertPassword(password);
 
-    let gzipData;
-    if (gzip) {
-        gzipData = gzipSync(plaindata);
-    } else {
-        gzipData = plaindata;
-    }
+  let gzipData;
+  if (gzip) {
+    gzipData = gzipSync(plaindata);
+  } else {
+    gzipData = plaindata;
+  }
 
-    const iv = randomBytes(12);
-    const salt = randomBytes(16);
+  const iv = randomBytes(12);
+  const salt = randomBytes(16);
 
-    const key = scryptSync(password, salt, 32);
+  const key = scryptSync(password, salt, 32);
 
-    const { ciphertext, authTag } = wilcocrypt._.encryptData(gzipData, key, iv);
+  const { ciphertext, authTag } = wilcocrypt._.encryptData(gzipData, key, iv);
 
-    const envelope = {
-        payload: ciphertext.toString('hex'),
-        authTag: authTag.toString('hex'),
-        salt: salt.toString('hex'),
-        iv: iv.toString('hex'),
-        version: wilcocrypt._.VERSION
-    };
+  const envelope = {
+    payload: ciphertext.toString('hex'),
+    authTag: authTag.toString('hex'),
+    salt: salt.toString('hex'),
+    iv: iv.toString('hex'),
+    version: wilcocrypt._.VERSION
+  };
 
-    return msgpack_encode(envelope);
+  return msgpackencode(envelope);
 };
 
 /**
@@ -221,46 +221,46 @@ wilcocrypt.encryptData = function (plaindata, password, gzip = true) {
  * @throws {WilcoCryptError} On invalid format, wrong password, version mismatch, or decompression failure
  */
 wilcocrypt.decryptData = function (encryptedData, password, gzip = true) {
-    wilcocrypt._.assertPassword(password);
-    
-    let envelope;
-    try {
-        envelope = msgpack_decode(encryptedData);
-    } catch {
-        throw new WilcoCryptError(
-            'Invalid encrypted data format (not MessagePack)',
-            'INVALID_FORMAT'
-        );
-    }
+  wilcocrypt._.assertPassword(password);
 
-    if (envelope.version !== wilcocrypt._.VERSION) {
-        throw new WilcoCryptError(
+  let envelope;
+  try {
+    envelope = msgpackdecode(encryptedData);
+  } catch {
+    throw new WilcoCryptError(
+      'Invalid encrypted data format (not MessagePack)',
+      'INVALID_FORMAT'
+    );
+  }
+
+  if (envelope.version !== wilcocrypt._.VERSION) {
+    throw new WilcoCryptError(
             `Version mismatch (expected ${wilcocrypt._.VERSION}, got ${envelope.version})`,
             'VERSION_MISMATCH'
-        );
-    }
-
-    const key = scryptSync(password, Buffer.from(envelope.salt, 'hex'), 32);
-
-    const decrypted = wilcocrypt._.decryptData(
-        envelope.payload,
-        envelope.authTag,
-        key,
-        Buffer.from(envelope.iv, 'hex')
     );
+  }
 
-    try {
-        if (gzip) {
-            return gunzipSync(decrypted);
-        } else {
-            return decrypted;
-        }
-    } catch {
-        throw new WilcoCryptError(
-            'Decryption succeeded but decompression failed (data may be corrupted or not compressed)',
-            'DECOMPRESSION_FAILED'
-        );
+  const key = scryptSync(password, Buffer.from(envelope.salt, 'hex'), 32);
+
+  const decrypted = wilcocrypt._.decryptData(
+    envelope.payload,
+    envelope.authTag,
+    key,
+    Buffer.from(envelope.iv, 'hex')
+  );
+
+  try {
+    if (gzip) {
+      return gunzipSync(decrypted);
+    } else {
+      return decrypted;
     }
+  } catch {
+    throw new WilcoCryptError(
+      'Decryption succeeded but decompression failed (data may be corrupted or not compressed)',
+      'DECOMPRESSION_FAILED'
+    );
+  }
 };
 
 /**
@@ -273,9 +273,9 @@ wilcocrypt.decryptData = function (encryptedData, password, gzip = true) {
  * @throws {WilcoCryptError} If password is invalid
  */
 wilcocrypt.encryptFile = function (filePath, password, gzip = true) {
-    const fileData = readFileSync(filePath);
-    const encryptedData = wilcocrypt.encryptData(fileData, password, gzip);
-    writeFileSync(`${filePath}.enc`, encryptedData);
+  const fileData = readFileSync(filePath);
+  const encryptedData = wilcocrypt.encryptData(fileData, password, gzip);
+  writeFileSync(`${filePath}.enc`, encryptedData);
 };
 
 /**
@@ -288,15 +288,15 @@ wilcocrypt.encryptFile = function (filePath, password, gzip = true) {
  * @throws {WilcoCryptError} If file extension is invalid or decryption fails
  */
 wilcocrypt.decryptFile = function (filePath, password, gzip = true) {
-    if (!filePath.endsWith('.enc')) {
-        throw new WilcoCryptError(
-            'Invalid file extension (expected .enc)',
-            'INVALID_FILE_EXTENSION'
-        );
-    }
+  if (!filePath.endsWith('.enc')) {
+    throw new WilcoCryptError(
+      'Invalid file extension (expected .enc)',
+      'INVALID_FILE_EXTENSION'
+    );
+  }
 
-    const encryptedData = readFileSync(filePath);
-    return wilcocrypt.decryptData(encryptedData, password, gzip);
+  const encryptedData = readFileSync(filePath);
+  return wilcocrypt.decryptData(encryptedData, password, gzip);
 };
 
 export default wilcocrypt;
