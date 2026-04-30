@@ -57,10 +57,10 @@ import wilcocrypt from 'wilcocrypt';
 const data = Buffer.from('Hello world');
 
 // Encrypt
-const encrypted = wilcocrypt.encryptData(data, 'password');
+const encrypted = wilcocrypt.encryptData(data, 'myStrongPassword');
 
 // Decrypt
-const decrypted = wilcocrypt.decryptData(encrypted, 'password');
+const decrypted = wilcocrypt.decryptData(encrypted, 'myStrongPassword');
 
 console.log(decrypted.toString());
 ```
