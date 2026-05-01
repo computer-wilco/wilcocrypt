@@ -38,6 +38,7 @@ All notable changes to WilcoCrypt are documented here.
 ### Fixed Bugs
 
 - Fixed the bug where the CLI tool would not work when running with npx or global
+- Fixed package.json issue with bin not being an object
 
 ---
 

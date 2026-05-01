@@ -10,7 +10,9 @@
   "author": "computerwilco",
   "type": "module",
   "main": "src/wilcocrypt.js",
-  "bin": "src/cli.js",
+  "bin": {
+    "wilcocrypt": "src/cli.js"
+  },
   "types": "types/wilcocrypt.d.ts",
   "scripts": {
     "test": "node src/cli.js",
