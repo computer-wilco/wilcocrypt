@@ -85,7 +85,7 @@ export interface WilcoCrypt {
    * Encrypts data using password-based AES-256-GCM.
    *
    * Output format:
-   * [HEADER (10 bytes)] + [salt (16)] + [iv (12)] + [authTag (16)] + [ciphertext]
+   * [HEADER (10 bytes)] + [VERSION (dynamic)] + [salt (16)] + [iv (12)] + [ciphertext] + [authTag (16)]
    *
    * @param plaindata Raw data to encrypt
    * @param password Password used for key derivation
@@ -101,7 +101,7 @@ export interface WilcoCrypt {
   /**
    * Decrypts encrypted data using password-based AES-256-GCM.
    *
-   * Validates internal header and extracts:
+   * Validates internal header and version, then extracts:
    * salt, iv, authTag and ciphertext from the binary payload.
    *
    * @param encryptedData Binary-encoded encrypted payload
@@ -111,6 +111,7 @@ export interface WilcoCrypt {
    *
    * @throws WilcoCryptError on:
    * - invalid header
+   * - version mismatch
    * - wrong password
    * - corrupted data
    */
@@ -131,12 +132,50 @@ export interface WilcoCrypt {
 
   /**
    * Decrypts a `.enc` file.
+   *
+   * If `outputPath` is provided, the decrypted data is written to that file
+   * and `undefined` is returned. Otherwise the decrypted Buffer is returned.
    */
-  decryptFile(
-    filePath: string,
+  decryptFile(filePath: string, password: string, outputPath: string, gzip?: boolean): undefined;
+  decryptFile(filePath: string, password: string, gzip?: boolean): Buffer;
+
+  /**
+   * Encrypts a file using streams and writes the result to `outputPath`.
+   * Memory-efficient alternative to `encryptFile` for large files.
+   *
+   * @param inputPath Path to the file to encrypt
+   * @param outputPath Path to write the encrypted output to
+   * @param password Password used for key derivation
+   * @param gzip Whether to compress data before encryption (default: true)
+   */
+  encryptFileStream(
+    inputPath: string,
+    outputPath: string,
     password: string,
     gzip?: boolean
-  ): Buffer;
+  ): Promise<void>;
+
+  /**
+   * Decrypts an encrypted file using streams.
+   * Memory-efficient alternative to `decryptFile` for large files.
+   * Cleans up the output file automatically if decryption or integrity check fails.
+   *
+   * @param inputPath Path to the encrypted file
+   * @param outputPath Path to write the decrypted output to
+   * @param password Password used for decryption
+   * @param gzip Whether to decompress after decryption (default: true)
+   *
+   * @throws WilcoCryptError on:
+   * - invalid header
+   * - version mismatch
+   * - decryption/integrity failure
+   */
+  decryptFileStream(
+    inputPath: string,
+    outputPath: string,
+    password: string,
+    gzip?: boolean
+  ): Promise<void>;
 }
 
 /**

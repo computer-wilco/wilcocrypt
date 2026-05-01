@@ -1,6 +1,6 @@
 {
   "name": "wilcocrypt",
-  "version": "2.1.1",
+  "version": "2.2.0",
   "description": "A encrypting tool",
   "keywords": [
     "encrypting",
@@ -17,7 +17,7 @@
     "lint": "npx semistandard",
     "lint:fix": "npx semistandard --fix",
     "update": "npx -y Jelmerro/nus",
-    "rollup": "rollup -c && node src/scripts/fix-cli-min-import.js && node src/scripts/chmod.js",
+    "rollup": "node src/scripts/shebang-fix.js pre && rollup -c && node src/scripts/shebang-fix.js post && node src/scripts/fix-cli-min-import.js && node src/scripts/chmod.js",
     "sea:blob": "node src/scripts/sea-blob.js",
     "sea:linux-x64": "cp node-binaries/linux-x64/node release/wilcocrypt-linux-x64 && npx postject release/wilcocrypt-linux-x64 NODE_SEA_BLOB sea/wilcocrypt.sea --sentinel-fuse NODE_SEA_FUSE_fce680ab2cc467b6e072b8b5df1996b2 && chmod +x release/wilcocrypt-linux-x64",
     "sea:linux-arm64": "cp node-binaries/linux-arm64/node release/wilcocrypt-linux-arm64 && npx postject release/wilcocrypt-linux-arm64 NODE_SEA_BLOB sea/wilcocrypt.sea --sentinel-fuse NODE_SEA_FUSE_fce680ab2cc467b6e072b8b5df1996b2 && chmod +x release/wilcocrypt-linux-arm64",

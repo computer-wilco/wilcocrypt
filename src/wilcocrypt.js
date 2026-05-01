@@ -1,6 +1,7 @@
 import { randomBytes, scryptSync, createCipheriv, createDecipheriv } from 'crypto';
-import { gzipSync, gunzipSync } from 'zlib';
-import { readFileSync, writeFileSync } from 'fs';
+import { gzipSync, gunzipSync, createGzip, createGunzip } from 'zlib';
+import { readFileSync, writeFileSync, createReadStream, createWriteStream, promises as fsPromises } from 'fs';
+import { pipeline } from 'stream/promises';
 
 /**
  * Main WilcoCrypt namespace.
@@ -46,7 +47,7 @@ wilcocrypt._.WilcoCryptError = WilcoCryptError;
  * Must match exactly during decryption.
  * @type {string}
  */
-wilcocrypt._.VERSION = '2.1.1';
+wilcocrypt._.VERSION = '2.2.0';
 
 /**
  * Minimum allowed password length.
@@ -81,7 +82,7 @@ wilcocrypt._.assertKeyAndIv = function (key, iv) {
 
   if (!Buffer.isBuffer(iv) || iv.length !== 12) {
     throw new WilcoCryptError(
-      'Invalid IV (expected 12-byte Buffer for GCM)',
+      'Invalid IV (expected 12-byte Buffer)',
       'INVALID_IV'
     );
   }
@@ -182,6 +183,9 @@ wilcocrypt._.decryptData = function (cipherBuffer, authTagBuffer, key, iv) {
 /**
  * Encrypts data using password-based AES-256-GCM.
  *
+ * Output format:
+ * [HEADER (10 bytes)] + [VERSION (dynamic)] + [salt (16)] + [iv (12)] + [ciphertext] + [authTag (16)]
+ *
  * @param {Buffer} plaindata - Raw data to encrypt
  * @param {string} password - Password used for key derivation
  * @param {boolean} [gzip=true] - Whether to compress data before encryption
@@ -198,38 +202,52 @@ wilcocrypt.encryptData = function (plaindata, password, gzip = true) {
   const key = scryptSync(password, salt, 32);
 
   const { ciphertext, authTag } = wilcocrypt._.encryptData(gzipData, key, iv);
+  const versionBuf = Buffer.from(wilcocrypt._.VERSION);
 
   return Buffer.concat([
     wilcocrypt._.HEADER, // 10 bytes
+    versionBuf, // dynamic
     salt, // 16 bytes
     iv, // 12 bytes
-    authTag, // 16 bytes
-    ciphertext // the rest
+    ciphertext, // variable
+    authTag // 16 bytes (at the end for streaming compatibility)
   ]);
 };
 
 /**
  * Decrypts encrypted data using password-based AES-256-GCM.
  *
- * @param {Buffer} encryptedData - Binary-encoded encrypted payload
+ * Validates internal header and version, then extracts:
+ * salt, iv, authTag and ciphertext from the binary payload.
+ *
+ * @param {Buffer} encryptedBuffer - Binary-encoded encrypted payload
  * @param {string} password - Password used for decryption
  * @param {boolean} [gzip=true] - Whether to decompress after decryption
  * @returns {Buffer} Decrypted raw data
- * @throws {WilcoCryptError} On invalid format, wrong password, version mismatch, or decompression failure
+ * @throws {WilcoCryptError} On invalid header, version mismatch, wrong password, or corrupted data
  */
 wilcocrypt.decryptData = function (encryptedBuffer, password, gzip = true) {
   wilcocrypt._.assertPassword(password);
 
-  const fileHeader = encryptedBuffer.subarray(0, 10);
+  const versionBuf = Buffer.from(wilcocrypt._.VERSION);
+  let offset = 0;
+
+  const fileHeader = encryptedBuffer.subarray(offset, offset += wilcocrypt._.HEADER.length);
   if (!fileHeader.equals(wilcocrypt._.HEADER)) {
     throw new WilcoCryptError('Invalid WilcoCrypt header', 'INVALID_HEADER');
   }
 
-  let offset = 10;
+  const fileVersion = encryptedBuffer.subarray(offset, offset += versionBuf.length);
+  if (!fileVersion.equals(versionBuf)) {
+    throw new WilcoCryptError('Version mismatch', 'VERSION_MISMATCH');
+  }
+
   const salt = encryptedBuffer.subarray(offset, offset += 16);
   const iv = encryptedBuffer.subarray(offset, offset += 12);
-  const authTag = encryptedBuffer.subarray(offset, offset += 16);
-  const ciphertext = encryptedBuffer.subarray(offset);
+
+  // authTag are the last 16 bytes; ciphertext is everything in between
+  const authTag = encryptedBuffer.subarray(encryptedBuffer.length - 16);
+  const ciphertext = encryptedBuffer.subarray(offset, encryptedBuffer.length - 16);
 
   const key = scryptSync(password, salt, 32);
 
@@ -256,13 +274,24 @@ wilcocrypt.encryptFile = function (filePath, password, gzip = true) {
 /**
  * Decrypts an encrypted `.enc` file.
  *
+ * If `outputPath` is provided, the decrypted data is written to that file
+ * and `undefined` is returned. Otherwise the decrypted Buffer is returned.
+ *
  * @param {string} filePath - Path to the `.enc` file
  * @param {string} password - Password used for decryption
+ * @param {string|boolean} [outputPath] - Optional path to write decrypted output to.
+ *   If omitted (or `true`/`false`), the function returns the decrypted Buffer instead.
  * @param {boolean} [gzip=true] - Whether to decompress after decryption
- * @returns {Buffer} Decrypted file contents
+ * @returns {Buffer|undefined} Decrypted file contents, or undefined if outputPath was given
  * @throws {WilcoCryptError} If file extension is invalid or decryption fails
  */
-wilcocrypt.decryptFile = function (filePath, password, gzip = true) {
+wilcocrypt.decryptFile = function (filePath, password, outputPath, gzip = true) {
+  // Support legacy 3-argument form: decryptFile(filePath, password, gzip?)
+  if (typeof outputPath === 'boolean') {
+    gzip = outputPath;
+    outputPath = undefined;
+  }
+
   if (!filePath.endsWith('.enc')) {
     throw new WilcoCryptError(
       'Invalid file extension (expected .enc)',
@@ -271,7 +300,123 @@ wilcocrypt.decryptFile = function (filePath, password, gzip = true) {
   }
 
   const encryptedData = readFileSync(filePath);
-  return wilcocrypt.decryptData(encryptedData, password, gzip);
+  const decrypted = wilcocrypt.decryptData(encryptedData, password, gzip);
+
+  if (outputPath) {
+    writeFileSync(outputPath, decrypted);
+    return;
+  }
+
+  return decrypted;
+};
+
+/**
+ * Encrypts a file using streams and writes the result to `outputPath`.
+ * Memory-efficient alternative to `encryptFile` for large files.
+ *
+ * Output format:
+ * [HEADER] + [VERSION] + [salt (16)] + [iv (12)] + [ciphertext] + [authTag (16)]
+ *
+ * @param {string} inputPath - Path to the file to encrypt
+ * @param {string} outputPath - Path to write the encrypted output to
+ * @param {string} password - Password used for key derivation
+ * @param {boolean} [gzip=true] - Whether to compress data before encryption
+ * @returns {Promise<void>}
+ * @throws {WilcoCryptError} If password is invalid
+ */
+wilcocrypt.encryptFileStream = async function (inputPath, outputPath, password, gzip = true) {
+  wilcocrypt._.assertPassword(password);
+
+  const salt = randomBytes(16);
+  const iv = randomBytes(12);
+  const key = scryptSync(password, salt, 32);
+  const versionBuf = Buffer.from(wilcocrypt._.VERSION);
+
+  const cipher = createCipheriv('aes-256-gcm', key, iv);
+  const writeStream = createWriteStream(outputPath);
+
+  writeStream.write(wilcocrypt._.HEADER);
+  writeStream.write(versionBuf);
+  writeStream.write(salt);
+  writeStream.write(iv);
+
+  const pipelineSteps = [createReadStream(inputPath)];
+  if (gzip) pipelineSteps.push(createGzip());
+  pipelineSteps.push(cipher);
+  pipelineSteps.push(writeStream);
+
+  // end: false so we can still append the authTag after the pipeline finishes
+  await pipeline(...pipelineSteps, { end: false });
+  writeStream.end(cipher.getAuthTag());
+};
+
+/**
+ * Decrypts an encrypted `.enc` file using streams.
+ * Memory-efficient alternative to `decryptFile` for large files.
+ * Cleans up the output file automatically if decryption or integrity check fails.
+ *
+ * @param {string} inputPath - Path to the encrypted `.enc` file
+ * @param {string} outputPath - Path to write the decrypted output to
+ * @param {string} password - Password used for decryption
+ * @param {boolean} [gzip=true] - Whether to decompress after decryption
+ * @returns {Promise<void>}
+ * @throws {WilcoCryptError} On invalid header, version mismatch, or decryption/integrity failure
+ */
+wilcocrypt.decryptFileStream = async function (inputPath, outputPath, password, gzip = true) {
+  wilcocrypt._.assertPassword(password);
+
+  const handle = await fsPromises.open(inputPath, 'r');
+  const versionBuf = Buffer.from(wilcocrypt._.VERSION);
+
+  const headLen = wilcocrypt._.HEADER.length;
+  const verLen = versionBuf.length;
+
+  const headerCheck = Buffer.alloc(headLen);
+  const versionCheck = Buffer.alloc(verLen);
+  const salt = Buffer.alloc(16);
+  const iv = Buffer.alloc(12);
+
+  let currentPos = 0;
+  await handle.read(headerCheck, 0, headLen, currentPos); currentPos += headLen;
+  await handle.read(versionCheck, 0, verLen, currentPos); currentPos += verLen;
+  await handle.read(salt, 0, 16, currentPos); currentPos += 16;
+  await handle.read(iv, 0, 12, currentPos); currentPos += 12;
+
+  if (!headerCheck.equals(wilcocrypt._.HEADER)) {
+    await handle.close();
+    throw new WilcoCryptError('Invalid WilcoCrypt header', 'INVALID_HEADER');
+  }
+
+  if (!versionCheck.equals(versionBuf)) {
+    await handle.close();
+    throw new WilcoCryptError('Version mismatch', 'VERSION_MISMATCH');
+  }
+
+  const stats = await handle.stat();
+  const authTag = Buffer.alloc(16);
+  await handle.read(authTag, 0, 16, stats.size - 16);
+
+  const key = scryptSync(password, salt, 32);
+  const decipher = createDecipheriv('aes-256-gcm', key, iv);
+  decipher.setAuthTag(authTag);
+
+  const pipelineSteps = [createReadStream(inputPath, { start: currentPos, end: stats.size - 17 })];
+  pipelineSteps.push(decipher);
+  if (gzip) pipelineSteps.push(createGunzip());
+  pipelineSteps.push(createWriteStream(outputPath));
+
+  try {
+    await pipeline(...pipelineSteps);
+  } catch {
+    await handle.close();
+    await fsPromises.unlink(outputPath);
+    throw new WilcoCryptError(
+      'Decryption failed (invalid password, corrupted data, or tampered file)',
+      'DECRYPTION_FAILED'
+    );
+  }
+
+  await handle.close();
 };
 
 export default wilcocrypt;

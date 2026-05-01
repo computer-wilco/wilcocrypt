@@ -2,22 +2,22 @@
 
 [![js-semistandard-style](https://img.shields.io/badge/code%20style-semistandard-brightgreen.svg)](https://github.com/standard/semistandard)
 
-**WilcoCrypt** is a small, secure, and predictable encryption library for Node.js.
+> **The `master` branch may be unstable during active development.**
+> For production use, always install from [npm](https://www.npmjs.com/package/wilcocrypt) or use a tagged [GitHub Release](https://github.com/computer-wilco/wilcocrypt/releases).
 
-It is designed around strong defaults, minimal dependencies, and consistent behavior across environments — from servers to low-end devices like Raspberry Pi.
+A simple, modern Node.js encryption library and CLI tool. AES-256-GCM, password-based key derivation via scrypt, optional gzip compression, and a streaming API for large files.
 
 ---
 
 ## Features
 
 - AES-256-GCM authenticated encryption
-- Password-based key derivation using scrypt
+- scrypt key derivation with a random salt per encryption
 - Optional gzip compression before encryption
-- Compact binary format using MessagePack
-- Built-in versioning and compatibility checks
-- Clear and consistent error handling
-- Simple, dependency-light design
-- CLI for quick file encryption and decryption
+- Streaming API for large files (`encryptFileStream` / `decryptFileStream`)
+- CLI with interactive password prompt
+- TypeScript types included
+- semistandard code style
 
 ---
 
@@ -27,99 +27,92 @@ It is designed around strong defaults, minimal dependencies, and consistent beha
 npm install wilcocrypt
 ```
 
-### CLI (global)
-
-```bash
-npm install -g wilcocrypt
-```
+Requires Node.js 18 or later.
 
 ---
 
-## Usage (Node.js)
+## Quick Start
 
 ```js
 import wilcocrypt from 'wilcocrypt';
 
-// Encrypt a file
-wilcocrypt.encryptFile('document.txt', 'myStrongPassword');
+// Encrypt / decrypt a Buffer
+const encrypted = wilcocrypt.encryptData(Buffer.from('Hello!'), 'my-password');
+const decrypted = wilcocrypt.decryptData(encrypted, 'my-password');
 
-// Decrypt a file
-const content = wilcocrypt.decryptFile('document.txt.enc', 'myStrongPassword');
+// Encrypt a file → writes file.txt.enc
+wilcocrypt.encryptFile('file.txt', 'my-password');
 
-console.log(content);
-```
+// Decrypt to Buffer
+const buf = wilcocrypt.decryptFile('file.txt.enc', 'my-password');
 
-### Working with Buffers
+// Decrypt directly to disk
+wilcocrypt.decryptFile('file.txt.enc', 'my-password', 'output.txt');
 
-```js
-import wilcocrypt from 'wilcocrypt';
-
-const data = Buffer.from('Hello world');
-
-// Encrypt
-const encrypted = wilcocrypt.encryptData(data, 'myStrongPassword');
-
-// Decrypt
-const decrypted = wilcocrypt.decryptData(encrypted, 'myStrongPassword');
-
-console.log(decrypted.toString());
+// Stream API (memory-efficient for large files)
+await wilcocrypt.encryptFileStream('big.zip', 'big.zip.enc', 'my-password');
+await wilcocrypt.decryptFileStream('big.zip.enc', 'big.zip', 'my-password');
 ```
 
 ---
 
-## CLI Usage
+## CLI
 
 ```bash
 # Encrypt
-wilcocrypt -e file.txt
-wilcocrypt --encrypt file.txt
+wilcocrypt -e secret.txt
+# → prompts for password, writes secret.txt.enc
 
-# Decrypt
-wilcocrypt -d file.txt.enc
-wilcocrypt --decrypt file.txt.enc
+# Decrypt to stdout
+wilcocrypt -d secret.txt.enc
+
+# Decrypt to a file
+wilcocrypt -d secret.txt.enc -o secret.txt
 ```
 
-The CLI will securely prompt for a password (input is masked).
+See `wilcocrypt --help` for all options.
 
 ---
 
-## Internal API
+## Binary Payload Format
 
-Advanced users can access internal helpers via:
+```
+[ HEADER (10) ] [ VERSION (dynamic) ] [ salt (16) ] [ iv (12) ] [ ciphertext ] [ authTag (16) ]
+```
+
+The auth tag is appended at the end for streaming compatibility. See [DOCS.md](./DOCS.md#binary-payload-format) for the full layout.
+
+> **Note:** The format changed in v2.2.0. Payloads from v2.1.x are not compatible.
+
+---
+
+## Error Handling
+
+All errors are instances of `WilcoCryptError` with a machine-readable `code` property.
 
 ```js
-wilcocrypt._
+import wilcocrypt from 'wilcocrypt';
+const { WilcoCryptError } = wilcocrypt._;
+
+try {
+  wilcocrypt.decryptData(payload, 'wrong');
+} catch (err) {
+  if (err instanceof WilcoCryptError) {
+    console.error(err.code);    // e.g. DECRYPTION_FAILED
+    console.error(err.message);
+  }
+}
 ```
 
-These APIs are **not stable** and may change between versions.
+Common codes: `WEAK_PASSWORD`, `INVALID_HEADER`, `VERSION_MISMATCH`, `DECRYPTION_FAILED`, `INVALID_FILE_EXTENSION`.
 
 ---
 
-## Format Overview
+## Documentation
 
-Encrypted output is stored as a MessagePack-encoded object containing:
+Full API reference, CLI docs, payload format, TypeScript usage, and security notes: **[DOCS.md](./DOCS.md)**
 
-- payload (ciphertext, hex)
-- authTag (hex)
-- salt (hex)
-- iv (hex)
-- version
-
----
-
-## Version
-
-- Current version: **2.1.1**
-- Encrypted data must match the exact version
-
----
-
-## Security Notes
-
-- Always use strong, unique passwords
-- Losing the password means permanent data loss
-- Do not modify encrypted files manually
-- Compression can be disabled if not needed
+Changelog: **[CHANGELOG.md](./CHANGELOG.md)**
 
 ---
 
