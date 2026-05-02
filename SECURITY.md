@@ -6,11 +6,12 @@ The following versions of WilcoCrypt are currently supported with security updat
 
 | Version | Supported          |
 | ------- | ------------------ |
-| 2.1.x   | :white_check_mark: |
+| 2.2.x   | :white_check_mark: |
+| 2.1.x   | :x:                |
 | 2.0.x   | :x:                |
 | 1.x     | :x:                |
 
-Only the latest minor version in the 2.x range receives security updates. All the versions below that are not supported.
+Only the latest minor version in the 2.x range receives updates. All the versions below that are not supported.
 
 ---
 
@@ -30,7 +31,6 @@ Please include:
 
 ### What to expect
 
-* You will receive a response within **48 hours**
 * I will investigate and confirm the issue
 * If accepted, a fix will be developed as soon as possible
 * A patched version will be released and documented
