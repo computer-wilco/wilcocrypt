@@ -13,6 +13,10 @@ Complete reference for the WilcoCrypt API, CLI, and binary format.
   - [decryptData](#decryptdata)
   - [encryptFile](#encryptfile)
   - [decryptFile](#decryptfile)
+  - [encryptDataAsync](#encryptdataasync)
+  - [decryptDataAsync](#decryptdataasync)
+  - [encryptFileAsync](#encryptfileasync)
+  - [decryptFileAsync](#decryptfileasync)
   - [encryptFileStream](#encryptfilestream)
   - [decryptFileStream](#decryptfilestream)
   - [Internal Namespace (`_`)](#internal-namespace-_)
@@ -55,6 +59,29 @@ const contents = wilcocrypt.decryptFile("file.txt.enc", "my-password");
 
 // Decrypt a file directly to disk
 wilcocrypt.decryptFile("file.txt.enc", "my-password", "output.txt");
+
+// Async API
+const encryptedAsync = await wilcocrypt.encryptDataAsync(
+  Buffer.from("Hello!"),
+  "my-password",
+);
+
+const decryptedAsync = await wilcocrypt.decryptDataAsync(
+  encryptedAsync,
+  "my-password",
+);
+
+// Async file API
+await wilcocrypt.encryptFileAsync(
+  "file.txt",
+  "my-password",
+);
+
+await wilcocrypt.decryptFileAsync(
+  "file.txt.enc",
+  "my-password",
+  "output.txt",
+);
 ```
 
 ---
@@ -150,6 +177,120 @@ const buf = wilcocrypt.decryptFile("document.pdf.enc", "passw0rd");
 
 // Write directly to disk
 wilcocrypt.decryptFile("document.pdf.enc", "passw0rd", "document.pdf");
+```
+
+---
+
+### `encryptDataAsync(plaindata, password, gzip?)`
+
+Asynchronous version of `encryptData`.
+
+Encrypts a Buffer using password-based AES-256-GCM. The password is never stored; a random salt is generated for every encryption call.
+
+| Parameter   | Type      | Default | Description                                |
+| ----------- | --------- | ------- | ------------------------------------------ |
+| `plaindata` | `Buffer`  | —       | Raw data to encrypt                        |
+| `password`  | `string`  | —       | Password for key derivation (min. 6 chars) |
+| `gzip`      | `boolean` | `true`  | Compress data before encryption            |
+
+**Returns:** `Promise<Buffer>` — the encrypted payload in the binary format.
+
+**Throws:** `WilcoCryptError` with code `WEAK_PASSWORD` if the password is too short.
+
+```js
+const encrypted = await wilcocrypt.encryptDataAsync(
+  Buffer.from("secret"),
+  "passw0rd",
+);
+```
+
+---
+
+### `decryptDataAsync(encryptedBuffer, password, gzip?)`
+
+Asynchronous version of `decryptData`.
+
+Decrypts a payload produced by `encryptDataAsync` or `encryptData`. Validates the header and version before attempting decryption.
+
+| Parameter         | Type      | Default | Description                     |
+| ----------------- | --------- | ------- | ------------------------------- |
+| `encryptedBuffer` | `Buffer`  | —       | Payload from `encryptData`      |
+| `password`        | `string`  | —       | Password used during encryption |
+| `gzip`            | `boolean` | `true`  | Decompress after decryption     |
+
+**Returns:** `Promise<Buffer>` — the original plaintext data.
+
+**Throws:**
+
+| Code                | Reason                                         |
+| ------------------- | ---------------------------------------------- |
+| `WEAK_PASSWORD`     | Password shorter than 6 characters             |
+| `INVALID_HEADER`    | Not a valid WilcoCrypt payload                 |
+| `VERSION_MISMATCH`  | Payload was encrypted with a different version |
+| `DECRYPTION_FAILED` | Wrong password, tampered or corrupt data       |
+
+```js
+const plain = await wilcocrypt.decryptDataAsync(
+  encrypted,
+  "passw0rd",
+);
+```
+
+---
+
+### `encryptFileAsync(filePath, password, gzip?)`
+
+Asynchronous version of `encryptFile`.
+
+Reads a file, encrypts it, and writes the result to `<filePath>.enc`.
+
+| Parameter  | Type      | Default | Description                 |
+| ---------- | --------- | ------- | --------------------------- |
+| `filePath` | `string`  | —       | Path to the source file     |
+| `password` | `string`  | —       | Password for key derivation |
+| `gzip`     | `boolean` | `true`  | Compress before encryption  |
+
+**Returns:** `Promise<void>`
+
+```js
+await wilcocrypt.encryptFileAsync(
+  "document.pdf",
+  "passw0rd",
+);
+```
+
+---
+
+### `decryptFileAsync(filePath, password, outputPath?, gzip?)`
+
+Asynchronous version of `decryptFile`.
+
+If `outputPath` is provided, the result is written to disk and `undefined` is returned. Otherwise the decrypted `Buffer` is returned.
+
+| Parameter    | Type      | Default     | Description                                |
+| ------------ | --------- | ----------- | ------------------------------------------ |
+| `filePath`   | `string`  | —           | Path to the `.enc` file                    |
+| `password`   | `string`  | —           | Password used during encryption            |
+| `outputPath` | `string`  | `undefined` | Optional path to write decrypted output to |
+| `gzip`       | `boolean` | `true`      | Decompress after decryption                |
+
+**Returns:** `Promise<Buffer>` when no `outputPath` is given, `Promise<undefined>` otherwise.
+
+**Throws:** Same error codes as `decryptFile`.
+
+```js
+// Return as Buffer
+const buf = await wilcocrypt.decryptFileAsync(
+  "document.pdf.enc",
+  "passw0rd",
+);
+
+// Write directly to disk
+await wilcocrypt.decryptFileAsync(
+  "document.pdf.enc",
+  "passw0rd",
+  "document.pdf",
+);
 ```
 
 ---
@@ -264,7 +405,7 @@ Passwords are entered interactively with character masking (`*`). The CLI requir
 
 ## Binary Payload Format
 
-Every payload produced by WilcoCrypt v2.2.0 has the following binary layout:
+Every payload produced in WilcoCrypt v2.2.x has the following binary layout:
 
 ```
 [ HEADER    ]  10 bytes   — magic bytes: 23 9 12 3 15 3 18 25 16 20
@@ -319,17 +460,60 @@ try {
 WilcoCrypt ships with `wilcocrypt.d.ts`. No `@types` package needed.
 
 ```ts
-import wilcocrypt, { WilcoCryptError } from "wilcocrypt";
+import wilcocrypt, {
+  WilcoCryptError,
+} from "wilcocrypt";
 
-const encrypted: Buffer = wilcocrypt.encryptData(Buffer.from("hi"), "passw0rd");
+const encrypted: Buffer =
+  wilcocrypt.encryptData(
+    Buffer.from("hi"),
+    "passw0rd",
+  );
+
+const encryptedAsync: Buffer =
+  await wilcocrypt.encryptDataAsync(
+    Buffer.from("hi"),
+    "passw0rd",
+  );
 
 // decryptFile overloads
-const buf: Buffer = wilcocrypt.decryptFile("file.enc", "passw0rd");
-wilcocrypt.decryptFile("file.enc", "passw0rd", "output.txt"); // returns undefined
+const buf: Buffer =
+  wilcocrypt.decryptFile(
+    "file.enc",
+    "passw0rd",
+  );
 
-// Streams
-await wilcocrypt.encryptFileStream("in.txt", "in.txt.enc", "passw0rd");
-await wilcocrypt.decryptFileStream("in.txt.enc", "out.txt", "passw0rd");
+wilcocrypt.decryptFile(
+  "file.enc",
+  "passw0rd",
+  "output.txt",
+);
+
+// async overloads
+const asyncBuf: Buffer =
+  await wilcocrypt.decryptFileAsync(
+    "file.enc",
+    "passw0rd",
+  );
+
+await wilcocrypt.decryptFileAsync(
+  "file.enc",
+  "passw0rd",
+  "output.txt",
+);
+
+// streams
+await wilcocrypt.encryptFileStream(
+  "in.txt",
+  "in.txt.enc",
+  "passw0rd",
+);
+
+await wilcocrypt.decryptFileStream(
+  "in.txt.enc",
+  "out.txt",
+  "passw0rd",
+);
 ```
 
 ---

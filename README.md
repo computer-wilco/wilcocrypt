@@ -14,10 +14,11 @@ A simple, modern Node.js encryption library and CLI tool. AES-256-GCM, password-
 - AES-256-GCM authenticated encryption
 - scrypt key derivation with a random salt per encryption
 - Optional gzip compression before encryption
+- Synchronous and asynchronous APIs
 - Streaming API for large files (`encryptFileStream` / `decryptFileStream`)
 - CLI with interactive password prompt
-- TypeScript types included
-- semistandard code style
+- Comprehensive TypeScript definitions with full JSDoc support
+- Prettier code formatting
 
 ---
 

@@ -4,6 +4,43 @@ All notable changes to WilcoCrypt are documented here.
 
 ---
 
+## [2.2.1] - 2026-06-06
+
+### Added
+
+* **Asynchronous API**:
+
+  * `encryptDataAsync()`
+  * `decryptDataAsync()`
+  * `encryptFileAsync()`
+  * `decryptFileAsync()`
+
+  These methods provide Promise-based alternatives to the existing synchronous API and integrate naturally with `async` / `await`.
+
+### Changed
+
+* **TypeScript definitions** significantly expanded and improved:
+
+  * Added detailed JSDoc documentation throughout the public API.
+  * Added parameter descriptions for internal helper functions.
+  * Added return value documentation.
+  * Added exception documentation (`@throws`) where applicable.
+  * Improved overload documentation for `decryptFile()` and `decryptFileAsync()`.
+  * Added payload format documentation to stream APIs.
+
+* **Dependencies updated** to the latest compatible versions.
+
+* **Code style** migrated from semistandard-only documentation to explicit **Prettier** formatting support.
+
+### Documentation
+
+* Updated `README.md` examples and feature descriptions.
+* Updated `DOCS.md` API documentation.
+* Improved TypeScript API reference consistency.
+* Improved JSDoc coverage across the entire codebase.
+
+---
+
 ## [2.2.0] - 2026-05-01
 
 ### Added
