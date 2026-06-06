@@ -1,23 +1,23 @@
-import { execFileSync } from 'child_process';
-import { platform, arch } from 'process';
-import { existsSync } from 'fs';
-import { fileURLToPath } from 'url';
-import { dirname, resolve, join } from 'path';
+import { execFileSync } from "child_process";
+import { platform, arch } from "process";
+import { existsSync } from "fs";
+import { fileURLToPath } from "url";
+import { dirname, resolve, join } from "path";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const projectRoot = resolve(__dirname, '../..');
+const projectRoot = resolve(__dirname, "../..");
 
 const platformMap = {
-  linux: 'linux',
-  win32: 'windows',
-  darwin: 'macos'
+  linux: "linux",
+  win32: "windows",
+  darwin: "macos",
 };
 
 const archMap = {
-  x64: 'x64',
-  arm64: 'arm64'
+  x64: "x64",
+  arm64: "arm64",
 };
 
 const p = platformMap[platform];
@@ -30,16 +30,12 @@ if (!p || !a) {
 
 const nodePath = join(
   projectRoot,
-  'node-binaries',
+  "node-binaries",
   `${p}-${a}`,
-  platform === 'win32' ? 'node.exe' : 'node'
+  platform === "win32" ? "node.exe" : "node",
 );
 
-const seaConfigPath = join(
-  projectRoot,
-  'sea',
-  'sea-config.json'
-);
+const seaConfigPath = join(projectRoot, "sea", "sea-config.json");
 
 if (!existsSync(nodePath)) {
   console.error(`Node binary not found: ${nodePath}`);
@@ -54,11 +50,7 @@ if (!existsSync(seaConfigPath)) {
 
 console.log(`Using Node binary: ${nodePath}`);
 
-execFileSync(
-  nodePath,
-  ['--experimental-sea-config', seaConfigPath],
-  {
-    stdio: 'inherit',
-    cwd: projectRoot
-  }
-);
+execFileSync(nodePath, ["--experimental-sea-config", seaConfigPath], {
+  stdio: "inherit",
+  cwd: projectRoot,
+});

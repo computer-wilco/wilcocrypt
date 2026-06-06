@@ -58,7 +58,7 @@ export interface InternalNamespace {
   encryptData(
     plainData: Buffer,
     key: Buffer,
-    iv: Buffer
+    iv: Buffer,
   ): {
     ciphertext: Buffer;
     authTag: Buffer;
@@ -71,7 +71,7 @@ export interface InternalNamespace {
     cipherBuffer: Buffer,
     authTagBuffer: Buffer,
     key: Buffer,
-    iv: Buffer
+    iv: Buffer,
   ): Buffer;
 }
 
@@ -92,11 +92,7 @@ export interface WilcoCrypt {
    * @param gzip Whether to compress data before encryption (default: true)
    * @returns Binary-encoded encrypted payload
    */
-  encryptData(
-    plaindata: Buffer,
-    password: string,
-    gzip?: boolean
-  ): Buffer;
+  encryptData(plaindata: Buffer, password: string, gzip?: boolean): Buffer;
 
   /**
    * Decrypts encrypted data using password-based AES-256-GCM.
@@ -115,20 +111,12 @@ export interface WilcoCrypt {
    * - wrong password
    * - corrupted data
    */
-  decryptData(
-    encryptedData: Buffer,
-    password: string,
-    gzip?: boolean
-  ): Buffer;
+  decryptData(encryptedData: Buffer, password: string, gzip?: boolean): Buffer;
 
   /**
    * Encrypts a file and writes `<filePath>.enc`.
    */
-  encryptFile(
-    filePath: string,
-    password: string,
-    gzip?: boolean
-  ): void;
+  encryptFile(filePath: string, password: string, gzip?: boolean): void;
 
   /**
    * Decrypts a `.enc` file.
@@ -136,7 +124,12 @@ export interface WilcoCrypt {
    * If `outputPath` is provided, the decrypted data is written to that file
    * and `undefined` is returned. Otherwise the decrypted Buffer is returned.
    */
-  decryptFile(filePath: string, password: string, outputPath: string, gzip?: boolean): undefined;
+  decryptFile(
+    filePath: string,
+    password: string,
+    outputPath: string,
+    gzip?: boolean,
+  ): undefined;
   decryptFile(filePath: string, password: string, gzip?: boolean): Buffer;
 
   /**
@@ -152,7 +145,7 @@ export interface WilcoCrypt {
     inputPath: string,
     outputPath: string,
     password: string,
-    gzip?: boolean
+    gzip?: boolean,
   ): Promise<void>;
 
   /**
@@ -174,7 +167,7 @@ export interface WilcoCrypt {
     inputPath: string,
     outputPath: string,
     password: string,
-    gzip?: boolean
+    gzip?: boolean,
   ): Promise<void>;
 }
 

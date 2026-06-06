@@ -16,8 +16,8 @@
   "types": "types/wilcocrypt.d.ts",
   "scripts": {
     "test": "node src/cli.js",
-    "lint": "npx semistandard",
-    "lint:fix": "npx semistandard --fix",
+    "semistandard": "npx semistandard",
+    "lint": "npx semistandard --fix && npx prettier --write .",
     "update": "npx -y Jelmerro/nus",
     "rollup": "node src/scripts/shebang-fix.js pre && rollup -c && node src/scripts/shebang-fix.js post && node src/scripts/fix-cli-min-import.js && node src/scripts/chmod.js",
     "sea:blob": "node src/scripts/sea-blob.js",
@@ -38,6 +38,7 @@
     "@rollup/plugin-replace": "6.0.3",
     "@rollup/plugin-terser": "1.0.0",
     "@types/node": "25.9.2",
+    "prettier": "3.8.3",
     "rollup": "4.61.1",
     "semistandard": "17.0.0"
   }

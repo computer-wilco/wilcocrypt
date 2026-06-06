@@ -1,6 +1,6 @@
 # WilcoCrypt
 
-[![js-semistandard-style](https://img.shields.io/badge/code%20style-semistandard-brightgreen.svg)](https://github.com/standard/semistandard)
+[![code style: prettier](https://img.shields.io/badge/code_style-prettier-ff69b4.svg?style=flat-square)](https://github.com/prettier/prettier)
 
 > **The `master` branch may be unstable during active development.**
 > For production use, always install from [npm](https://www.npmjs.com/package/wilcocrypt) or use a tagged [GitHub Release](https://github.com/computer-wilco/wilcocrypt/releases).
@@ -34,24 +34,24 @@ Requires Node.js 18 or later.
 ## Quick Start
 
 ```js
-import wilcocrypt from 'wilcocrypt';
+import wilcocrypt from "wilcocrypt";
 
 // Encrypt / decrypt a Buffer
-const encrypted = wilcocrypt.encryptData(Buffer.from('Hello!'), 'my-password');
-const decrypted = wilcocrypt.decryptData(encrypted, 'my-password');
+const encrypted = wilcocrypt.encryptData(Buffer.from("Hello!"), "my-password");
+const decrypted = wilcocrypt.decryptData(encrypted, "my-password");
 
 // Encrypt a file → writes file.txt.enc
-wilcocrypt.encryptFile('file.txt', 'my-password');
+wilcocrypt.encryptFile("file.txt", "my-password");
 
 // Decrypt to Buffer
-const buf = wilcocrypt.decryptFile('file.txt.enc', 'my-password');
+const buf = wilcocrypt.decryptFile("file.txt.enc", "my-password");
 
 // Decrypt directly to disk
-wilcocrypt.decryptFile('file.txt.enc', 'my-password', 'output.txt');
+wilcocrypt.decryptFile("file.txt.enc", "my-password", "output.txt");
 
 // Stream API (memory-efficient for large files)
-await wilcocrypt.encryptFileStream('big.zip', 'big.zip.enc', 'my-password');
-await wilcocrypt.decryptFileStream('big.zip.enc', 'big.zip', 'my-password');
+await wilcocrypt.encryptFileStream("big.zip", "big.zip.enc", "my-password");
+await wilcocrypt.decryptFileStream("big.zip.enc", "big.zip", "my-password");
 ```
 
 ---
@@ -91,14 +91,14 @@ The auth tag is appended at the end for streaming compatibility. See [DOCS.md](.
 All errors are instances of `WilcoCryptError` with a machine-readable `code` property.
 
 ```js
-import wilcocrypt from 'wilcocrypt';
+import wilcocrypt from "wilcocrypt";
 const { WilcoCryptError } = wilcocrypt._;
 
 try {
-  wilcocrypt.decryptData(payload, 'wrong');
+  wilcocrypt.decryptData(payload, "wrong");
 } catch (err) {
   if (err instanceof WilcoCryptError) {
-    console.error(err.code);    // e.g. DECRYPTION_FAILED
+    console.error(err.code); // e.g. DECRYPTION_FAILED
     console.error(err.message);
   }
 }
