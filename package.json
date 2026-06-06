@@ -17,7 +17,7 @@
   "scripts": {
     "test": "node src/cli.js",
     "semistandard": "npx semistandard",
-    "lint": "npx semistandard --fix && npx prettier --write .",
+    "lint": "npx semistandard --fix; npx prettier --write .",
     "update": "npx -y Jelmerro/nus",
     "rollup": "node src/scripts/shebang-fix.js pre && rollup -c && node src/scripts/shebang-fix.js post && node src/scripts/fix-cli-min-import.js && node src/scripts/chmod.js",
     "sea:blob": "node src/scripts/sea-blob.js",

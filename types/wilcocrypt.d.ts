@@ -39,21 +39,40 @@ export interface InternalNamespace {
 
   /**
    * Validates AES-256-GCM key and IV.
+   *
+   * @param key AES-256 encryption key (32-byte Buffer)
+   * @param iv GCM initialization vector (12-byte Buffer)
+   *
+   * @throws WilcoCryptError
    */
   assertKeyAndIv(key: Buffer, iv: Buffer): void;
 
   /**
    * Validates password strength.
+   *
+   * @param password Password to validate
+   *
+   * @throws WilcoCryptError
    */
   assertPassword(password: string): void;
 
   /**
    * Constant-time buffer comparison.
+   * Reserved for future extensions.
+   *
+   * @param a First buffer
+   * @param b Second buffer
+   * @returns True if both buffers are identical
    */
   constantTimeEqual(a: Buffer, b: Buffer): boolean;
 
   /**
    * Encrypts raw data using AES-256-GCM.
+   *
+   * @param plainData Raw data to encrypt
+   * @param key AES-256 encryption key
+   * @param iv GCM initialization vector
+   * @returns Ciphertext and authentication tag
    */
   encryptData(
     plainData: Buffer,
@@ -66,6 +85,14 @@ export interface InternalNamespace {
 
   /**
    * Decrypts AES-256-GCM encrypted data.
+   *
+   * @param cipherBuffer Encrypted ciphertext
+   * @param authTagBuffer AES-GCM authentication tag
+   * @param key AES-256 encryption key
+   * @param iv GCM initialization vector
+   * @returns Decrypted raw data
+   *
+   * @throws WilcoCryptError
    */
   decryptData(
     cipherBuffer: Buffer,
@@ -91,6 +118,8 @@ export interface WilcoCrypt {
    * @param password Password used for key derivation
    * @param gzip Whether to compress data before encryption (default: true)
    * @returns Binary-encoded encrypted payload
+   *
+   * @throws WilcoCryptError If password is invalid
    */
   encryptData(plaindata: Buffer, password: string, gzip?: boolean): Buffer;
 
@@ -114,15 +143,35 @@ export interface WilcoCrypt {
   decryptData(encryptedData: Buffer, password: string, gzip?: boolean): Buffer;
 
   /**
-   * Encrypts a file and writes `<filePath>.enc`.
+   * Encrypts a file and writes the result to `<filePath>.enc`.
+   *
+   * @param filePath Path to the file to encrypt
+   * @param password Password used for encryption
+   * @param gzip Whether to compress before encryption (default: true)
+   *
+   * @throws WilcoCryptError If password is invalid
    */
   encryptFile(filePath: string, password: string, gzip?: boolean): void;
 
   /**
-   * Decrypts a `.enc` file.
+   * Decrypts an encrypted `.enc` file.
    *
    * If `outputPath` is provided, the decrypted data is written to that file
    * and `undefined` is returned. Otherwise the decrypted Buffer is returned.
+   *
+   * @param filePath Path to the `.enc` file
+   * @param password Password used for decryption
+   * @param outputPath Optional path to write decrypted output to.
+   * If omitted, the function returns the decrypted Buffer instead.
+   * @param gzip Whether to decompress after decryption (default: true)
+   * @returns Undefined when outputPath is provided
+   *
+   * @throws WilcoCryptError on:
+   * - invalid file extension
+   * - invalid header
+   * - version mismatch
+   * - wrong password
+   * - corrupted data
    */
   decryptFile(
     filePath: string,
@@ -130,16 +179,149 @@ export interface WilcoCrypt {
     outputPath: string,
     gzip?: boolean,
   ): undefined;
-  decryptFile(filePath: string, password: string, gzip?: boolean): Buffer;
+
+  /**
+   * Decrypts an encrypted `.enc` file.
+   *
+   * If `outputPath` is omitted, the decrypted Buffer is returned.
+   *
+   * @param filePath Path to the `.enc` file
+   * @param password Password used for decryption
+   * @param gzip Whether to decompress after decryption (default: true)
+   * @returns Decrypted file contents
+   *
+   * @throws WilcoCryptError on:
+   * - invalid file extension
+   * - invalid header
+   * - version mismatch
+   * - wrong password
+   * - corrupted data
+   */
+  decryptFile(
+    filePath: string,
+    password: string,
+    gzip?: boolean,
+  ): Buffer;
+
+  /**
+   * Encrypts data asynchronously using password-based AES-256-GCM.
+   *
+   * Output format:
+   * [HEADER (10 bytes)] + [VERSION (dynamic)] + [salt (16)] + [iv (12)] + [ciphertext] + [authTag (16)]
+   *
+   * @param plaindata Raw data to encrypt
+   * @param password Password used for key derivation
+   * @param gzip Whether to compress data before encryption (default: true)
+   * @returns Binary-encoded encrypted payload
+   *
+   * @throws WilcoCryptError If password is invalid
+   */
+  encryptDataAsync(
+    plaindata: Buffer,
+    password: string,
+    gzip?: boolean,
+  ): Promise<Buffer>;
+
+  /**
+   * Decrypts encrypted data asynchronously using password-based AES-256-GCM.
+   *
+   * Validates internal header and version, then extracts:
+   * salt, iv, authTag and ciphertext from the binary payload.
+   *
+   * @param encryptedData Binary-encoded encrypted payload
+   * @param password Password used for decryption
+   * @param gzip Whether to decompress after decryption (default: true)
+   * @returns Decrypted raw data
+   *
+   * @throws WilcoCryptError on:
+   * - invalid header
+   * - version mismatch
+   * - wrong password
+   * - corrupted data
+   */
+  decryptDataAsync(
+    encryptedData: Buffer,
+    password: string,
+    gzip?: boolean,
+  ): Promise<Buffer>;
+
+  /**
+   * Encrypts a file asynchronously and writes the result to `<filePath>.enc`.
+   *
+   * @param filePath Path to the file to encrypt
+   * @param password Password used for encryption
+   * @param gzip Whether to compress before encryption (default: true)
+   *
+   * @throws WilcoCryptError If password is invalid
+   */
+  encryptFileAsync(
+    filePath: string,
+    password: string,
+    gzip?: boolean,
+  ): Promise<void>;
+
+  /**
+   * Decrypts a `.enc` file asynchronously.
+   *
+   * If `outputPath` is provided, the decrypted data is written to that file
+   * and `undefined` is returned. Otherwise the decrypted Buffer is returned.
+   *
+   * @param filePath Path to the `.enc` file
+   * @param password Password used for decryption
+   * @param outputPath Optional path to write decrypted output to
+   * @param gzip Whether to decompress after decryption (default: true)
+   * @returns Undefined when outputPath is provided
+   *
+   * @throws WilcoCryptError on:
+   * - invalid file extension
+   * - invalid header
+   * - version mismatch
+   * - wrong password
+   * - corrupted data
+   */
+  decryptFileAsync(
+    filePath: string,
+    password: string,
+    outputPath: string,
+    gzip?: boolean,
+  ): Promise<undefined>;
+
+  /**
+   * Decrypts an encrypted `.enc` file asynchronously.
+   *
+   * If `outputPath` is omitted, the decrypted Buffer is returned.
+   *
+   * @param filePath Path to the `.enc` file
+   * @param password Password used for decryption
+   * @param gzip Whether to decompress after decryption (default: true)
+   * @returns Decrypted file contents
+   *
+   * @throws WilcoCryptError on:
+   * - invalid file extension
+   * - invalid header
+   * - version mismatch
+   * - wrong password
+   * - corrupted data
+   */
+  decryptFileAsync(
+    filePath: string,
+    password: string,
+    gzip?: boolean,
+  ): Promise<Buffer>;
 
   /**
    * Encrypts a file using streams and writes the result to `outputPath`.
    * Memory-efficient alternative to `encryptFile` for large files.
    *
+   * Output format:
+   * [HEADER] + [VERSION] + [salt (16)] + [iv (12)] + [ciphertext] + [authTag (16)]
+   *
    * @param inputPath Path to the file to encrypt
    * @param outputPath Path to write the encrypted output to
    * @param password Password used for key derivation
    * @param gzip Whether to compress data before encryption (default: true)
+   *
+   * @throws WilcoCryptError If password is invalid
    */
   encryptFileStream(
     inputPath: string,
