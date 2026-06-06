@@ -30,15 +30,15 @@
     "clean": "rm -rf dist && rm -rf sea/*.sea && rm -rf release/*"
   },
   "dependencies": {
-    "commander": "14.0.3"
+    "commander": "15.0.0"
   },
   "devDependencies": {
-    "@rollup/plugin-commonjs": "29.0.2",
+    "@rollup/plugin-commonjs": "29.0.3",
     "@rollup/plugin-node-resolve": "16.0.3",
     "@rollup/plugin-replace": "6.0.3",
     "@rollup/plugin-terser": "1.0.0",
-    "@types/node": "25.9.1",
-    "rollup": "4.60.2",
+    "@types/node": "25.9.2",
+    "rollup": "4.61.1",
     "semistandard": "17.0.0"
   }
 }
