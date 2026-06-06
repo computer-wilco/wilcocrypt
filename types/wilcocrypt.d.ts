@@ -197,11 +197,7 @@ export interface WilcoCrypt {
    * - wrong password
    * - corrupted data
    */
-  decryptFile(
-    filePath: string,
-    password: string,
-    gzip?: boolean,
-  ): Buffer;
+  decryptFile(filePath: string, password: string, gzip?: boolean): Buffer;
 
   /**
    * Encrypts data asynchronously using password-based AES-256-GCM.
