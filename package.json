@@ -39,7 +39,7 @@
     "@rollup/plugin-terser": "1.0.0",
     "@types/node": "25.9.2",
     "prettier": "3.8.3",
-    "rollup": "4.61.1",
+    "rollup": "4.62.3",
     "semistandard": "17.0.0"
   }
 }
